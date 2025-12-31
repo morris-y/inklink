@@ -1,4 +1,4 @@
-Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that easy.
+Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that simple.
 
 It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her *skioula*, little shade, because he caught her peeping at him from behind a curtain. She hadn’t meant to stare, or more precisely to be caught staring. She’d heard the music faintly from some distant hall and walked towards it in a trance. 
 
