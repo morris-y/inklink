@@ -25,19 +25,22 @@ const fileContentCache = new LRUCache<string, string>({
  * Get all commits that modified a specific file
  * Includes tracking through file renames
  *
- * @param filename Path to file relative to repo root
+ * @param filename Path to file relative to repo root (or just filename, will prepend chapters/)
  * @returns Array of git versions sorted by date (newest first)
  */
 export async function getChapterVersions(filename: string): Promise<GitVersion[]> {
   try {
+    // Prepend chapters/ if not already present
+    const fullPath = filename.startsWith('chapters/') ? filename : `chapters/${filename}`;
+
     // Check cache first
-    const cacheKey = `log:${filename}`;
+    const cacheKey = `log:${fullPath}`;
     let logResult = gitLogCache.get(cacheKey);
 
     if (!logResult) {
       // Fetch from git
       logResult = await git.log({
-        file: filename,
+        file: fullPath,
         '--follow': null // Track through renames
       });
       gitLogCache.set(cacheKey, logResult);
@@ -69,7 +72,7 @@ export async function getChapterVersions(filename: string): Promise<GitVersion[]
  * Get file content at a specific commit
  * Results are cached indefinitely (immutable)
  *
- * @param filename Path to file relative to repo root
+ * @param filename Path to file relative to repo root (or just filename, will prepend chapters/)
  * @param commitSha Git commit SHA
  * @returns File content as string
  */
@@ -78,13 +81,16 @@ export async function getFileContentAtCommit(
   commitSha: string
 ): Promise<string> {
   try {
+    // Prepend chapters/ if not already present
+    const fullPath = filename.startsWith('chapters/') ? filename : `chapters/${filename}`;
+
     // Check cache first
-    const cacheKey = `content:${filename}:${commitSha}`;
+    const cacheKey = `content:${fullPath}:${commitSha}`;
     let content = fileContentCache.get(cacheKey);
 
     if (content === undefined) {
       // Fetch from git
-      content = await git.show([`${commitSha}:${filename}`]);
+      content = await git.show([`${commitSha}:${fullPath}`]);
       fileContentCache.set(cacheKey, content);
     }
 
@@ -166,7 +172,7 @@ export async function validateCommitExists(commitSha: string): Promise<boolean> 
  * Get git diff between two commits for a specific file
  * Used for detecting which lines/words changed
  *
- * @param filename Path to file relative to repo root
+ * @param filename Path to file relative to repo root (or just filename, will prepend chapters/)
  * @param fromCommit Previous commit SHA (or null for initial commit)
  * @param toCommit New commit SHA
  * @returns Unified diff output as string
@@ -177,9 +183,12 @@ export async function getFileDiff(
   toCommit: string
 ): Promise<string> {
   try {
+    // Prepend chapters/ if not already present
+    const fullPath = filename.startsWith('chapters/') ? filename : `chapters/${filename}`;
+
     if (!fromCommit) {
       // For initial commit, show all content as additions
-      const content = await getFileContentAtCommit(filename, toCommit);
+      const content = await getFileContentAtCommit(fullPath, toCommit);
       // Format as unified diff
       const lines = content.split('\n');
       const diffLines = [
@@ -191,8 +200,8 @@ export async function getFileDiff(
 
     // Get diff between commits
     const diff = await git.diff([
-      `${fromCommit}:${filename}`,
-      `${toCommit}:${filename}`
+      `${fromCommit}:${fullPath}`,
+      `${toCommit}:${fullPath}`
     ]);
 
     return diff;
