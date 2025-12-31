@@ -2,7 +2,7 @@ Once upon a time, on the banks of the river Hebrus, in a land that would one day
 
 It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her *skioula*, little shade, because he caught her peeping at him from behind a curtain. She hadn’t meant to stare, or more precisely to be caught staring. She’d heard the music faintly from some distant hall and walked towards it in a trance. 
 
-The prince sat on a window ledge, sihouetted against the evening. The moonlight bleached his hair to silver and his skin to the palest rose. His bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara. And like the gods’ own ambrosia his voice filled the room.
+The prince sat on a window ledge, silhouetted against the evening. The moonlight bleached his hair to silver and his skin to the palest rose. His bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara. And like the gods' own ambrosia his voice filled the room.
 
 *The sun died early*
 
