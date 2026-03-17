@@ -1,5 +1,5 @@
 ---
-title: "II. a friendship"
+title: "chapter II"
 order: 2
 ---
 

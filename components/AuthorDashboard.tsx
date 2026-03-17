@@ -44,96 +44,99 @@ const Shell = styled.div`
 
 /* ─── Tab row ─────────────────────────────────────────────────────────────── */
 
+const TAB_H = 50;
+const CORNER_TAB_W = 179; /* corner_tab.svg: 579×162 scaled to h=50 */
+const FOLDER_TAB_W = 201; /* folder_tab.svg: 652×162 scaled to h=50 */
+const TAB_OVERLAP = 22;   /* shoulder width at this scale */
+
 const TabRow = styled.div`
+  position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  z-index: 3;
+
+  /* every tab after the first pulls left so active shoulder overlaps inactive */
+  & > * + * {
+    margin-left: -${TAB_OVERLAP}px;
+  }
 `;
 
-const FolderTab = styled.button<{ $active: boolean; $isLeft: boolean }>`
+const InactiveTab = styled.button`
   position: relative;
-  padding: 0.4rem 1.6rem calc(0.4rem + 1px);
+  height: ${TAB_H}px;
+  padding: 0 1.6rem;
   border: none;
   border-radius: 6px 6px 0 0;
+  ${SURFACE_TEXTURE}
+  background-color: ${INACTIVE_TAB_SURFACE};
+  color: rgba(26,26,24,0.45);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  font-weight: ${p => p.$active ? '500' : '400'};
+  font-weight: 400;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-  ${SURFACE_TEXTURE}
-  background-color: ${p => p.$active ? SURFACE_BASE : INACTIVE_TAB_SURFACE};
-  color: ${p => p.$active ? '#1a1a18' : 'rgba(26,26,24,0.5)'};
-  z-index: ${p => p.$active ? 2 : 1};
-  /* Bridge: 1px overlap with panel erases the seam */
-  margin-bottom: ${p => p.$active ? '-1px' : '0'};
-  /* Inset highlight gives the tab a formed feel */
-  ${p => p.$active && css`box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);`}
+  z-index: 1;
 
   &:hover {
-    background-color: ${p => p.$active ? SURFACE_BASE : '#ebe6dd'};
-    color: rgba(26,26,24,0.8);
+    background-color: #ebe6dd;
+    color: rgba(26,26,24,0.78);
   }
+`;
 
-  /* Concave corner: outer-right notch where active tab meets panel surface */
-  ${p => p.$active && p.$isLeft && css`
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      right: -6px;
-      width: 6px;
-      height: 6px;
-      ${SURFACE_TEXTURE}
-      border-bottom-left-radius: 6px;
-      pointer-events: none;
-      z-index: 3;
-    }
-  `}
+const ActiveTabWrap = styled.div<{ $w: number }>`
+  position: relative;
+  width: ${p => p.$w}px;
+  height: ${TAB_H}px;
+  z-index: 4;
+  flex-shrink: 0;
+  margin-bottom: -2px;
+`;
 
-  /* Concave corners on both sides when right tab is active */
-  ${p => p.$active && !p.$isLeft && css`
-    &::before {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: -6px;
-      width: 6px;
-      height: 6px;
-      ${SURFACE_TEXTURE}
-      border-bottom-right-radius: 6px;
-      pointer-events: none;
-      z-index: 3;
-    }
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      right: -6px;
-      width: 6px;
-      height: 6px;
-      ${SURFACE_TEXTURE}
-      border-bottom-left-radius: 6px;
-      pointer-events: none;
-      z-index: 3;
-    }
-  `}
+const ActiveTabSurface = styled.div<{ $mask: string }>`
+  position: absolute;
+  inset: 0;
+  ${SURFACE_TEXTURE}
+  background-color: ${SURFACE_BASE};
+
+  -webkit-mask-image: url('${p => p.$mask}');
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+
+  mask-image: url('${p => p.$mask}');
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+`;
+
+const ActiveTabLabel = styled.span`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin-top: -8px; /* nudge up from shoulder region */
+  white-space: nowrap;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: #1a1a18;
 `;
 
 /* ─── Panel: the content surface, gets the shadow ────────────────────────── */
 
 const Panel = styled.div`
+  position: relative;
   display: flex;
   flex: 1;
-  ${SURFACE_TEXTURE}
-  /* top-left always flat: Heatmap tab always occupies that corner regardless of which tab is active */
-  border-radius: 0 6px 6px 6px;
-  box-shadow: none;
-  overflow: hidden;
   min-height: 0;
-  position: relative;
+  overflow: hidden;
   z-index: 1;
+
+  ${SURFACE_TEXTURE}
+  background-color: ${SURFACE_BASE};
+  border-radius: 0 10px 10px 10px;
+
 `;
 
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -242,37 +245,6 @@ const Stat = styled.div`
     color: #1a1a18;
     font-weight: 500;
   }
-`;
-
-const ShareLink = styled.a`
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.7rem;
-  color: #1a1a18;
-  opacity: 0.35;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
-
-  &:hover { opacity: 1; }
-`;
-
-const InnerTabBar = styled.div`
-  display: flex;
-  gap: 0;
-`;
-
-const InnerTab = styled.button<{ $active: boolean }>`
-  padding: 0.6rem 1.1rem;
-  border: none;
-  background: transparent;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.8rem;
-  font-weight: ${p => p.$active ? '600' : '400'};
-  color: ${p => p.$active ? '#1a1a18' : '#9a9892'};
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border-bottom: 2px solid ${p => p.$active ? '#1a1a18' : 'transparent'};
-
-  &:hover { color: #1a1a18; }
 `;
 
 const ScrollableContent = styled.div`
@@ -436,7 +408,6 @@ interface DashSuggestion {
 
 export default function AuthorDashboard() {
   const [loading, setLoading] = useState(true);
-  const [shareUrl, setShareUrl] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [chapterVersionId, setChapterVersionId] = useState<string | null>(null);
@@ -458,7 +429,6 @@ export default function AuthorDashboard() {
 
   useEffect(() => {
     fetchChapters();
-    generateShareUrl();
     setLoading(false);
   }, []);
 
@@ -589,12 +559,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  const generateShareUrl = () => {
-    if (typeof window !== 'undefined') {
-      setShareUrl(`${window.location.origin}/read`);
-    }
-  };
-
   const chapterStats = {
     likes: heatmapLines.reduce((s, l) => s + l.likeCount, 0),
     dislikes: heatmapLines.reduce((s, l) => s + l.dislikeCount, 0),
@@ -611,18 +575,27 @@ export default function AuthorDashboard() {
       <Shell>
         {/* Tab row sits at the top of the shell */}
         <TabRow>
-          <FolderTab $active={activeView === 'likes'} $isLeft={true} onClick={() => setActiveView('likes')}>
-            Heatmap
-          </FolderTab>
-          <FolderTab $active={activeView === 'comments'} $isLeft={false} onClick={() => setActiveView('comments')}>
-            Comments & Edits
-          </FolderTab>
+          {activeView === 'likes' ? (
+            <ActiveTabWrap $w={CORNER_TAB_W}>
+              <ActiveTabSurface $mask="/corner_tab.svg" />
+              <ActiveTabLabel>Heatmap</ActiveTabLabel>
+            </ActiveTabWrap>
+          ) : (
+            <InactiveTab onClick={() => setActiveView('likes')}>Heatmap</InactiveTab>
+          )}
+
+          {activeView === 'comments' ? (
+            <ActiveTabWrap $w={FOLDER_TAB_W}>
+              <ActiveTabSurface $mask="/folder_tab.svg" />
+              <ActiveTabLabel>Comments &amp; Edits</ActiveTabLabel>
+            </ActiveTabWrap>
+          ) : (
+            <InactiveTab onClick={() => setActiveView('comments')}>Comments &amp; Edits</InactiveTab>
+          )}
         </TabRow>
 
         {/* Panel shares background with the active tab, gets the shadow */}
         <Panel>
-          {/* Chapter sidebar */}
-
           {/* Content */}
           <ContentArea>
             {loading ? (
