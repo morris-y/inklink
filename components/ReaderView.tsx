@@ -1,79 +1,113 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
+import styled, { css } from 'styled-components';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Chapter } from '@/types';
 import ChapterReader from './ChapterReader';
 
-const Container = styled.div`
+const SURFACE_BASE = '#fcfcfc';
+const SURFACE_TEXTURE = css`
+  background-color: ${SURFACE_BASE};
+  background-image: url('/bg-texture.png');
+  background-repeat: repeat;
+  background-size: 100px 100px;
+`;
+
+const Desktop = styled.div`
   min-height: 100vh;
-  background: #fafafa;
+  padding: 3% 10% 10% 10%;
+  background-color: #302f2f;
   display: flex;
   flex-direction: column;
 `;
 
-const Header = styled.header`
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 1rem 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-`;
-
-const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
-`;
-
-const Main = styled.main`
-  flex: 1;
+const Shell = styled.div`
+  position: relative;
+  isolation: isolate;
   display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 2%;
+  background: transparent;
+`;
+
+const Panel = styled.div`
+  display: flex;
+  flex: 1;
+  ${SURFACE_TEXTURE}
+  border-radius: 6px 6px 6px 6px;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
 `;
 
 const Sidebar = styled(motion.aside)`
-  width: 280px;
-  background: white;
-  border-right: 1px solid #e0e0e0;
-  padding: 2rem 0;
+  width: 220px;
+  background: rgba(26,26,24,0.025);
+  border-left: 1px solid rgba(26,26,24,0.06);
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
+  flex-shrink: 0;
+`;
+
+const SidebarHeader = styled.div`
+  padding: 1.5rem 1.5rem 0.5rem;
+  display: flex;
+  align-items: center;
+`;
+
+const SidebarTitle = styled.span`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(26,26,24,0.3);
 `;
 
 const ChapterList = styled.ul`
   list-style: none;
+  padding: 0.5rem 0 1rem;
 `;
 
 const ChapterItem = styled.li<{ $active: boolean }>`
-  padding: 0.75rem 2rem;
+  padding: 0.5rem 1.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: ${props => props.$active ? '#f0f0f0' : 'transparent'};
-  border-left: 3px solid ${props => props.$active ? '#1a1a1a' : 'transparent'};
-  color: ${props => props.$active ? '#1a1a1a' : '#666'};
-  font-weight: ${props => props.$active ? '600' : '400'};
+  transition: all 0.12s ease;
+  border-right: 2px solid ${p => p.$active ? '#b94a36' : 'transparent'};
+  background: transparent;
 
   &:hover {
-    background: #f5f5f5;
-    color: #1a1a1a;
+    background: rgba(26,26,24,0.03);
   }
 `;
 
-const Content = styled.div`
-  flex: 1;
-  overflow-y: auto;
+const ChapterItemTitle = styled.div<{ $active: boolean }>`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: ${p => p.$active ? '500' : '400'};
+  color: ${p => p.$active ? '#1a1a18' : '#6a6a62'};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 interface ReaderViewProps {
-  readerId: string;
+  sessionId: string;
 }
 
-export default function ReaderView({ readerId }: ReaderViewProps) {
+export default function ReaderView({ sessionId }: ReaderViewProps) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [currentChapterId, setCurrentChapterId] = useState<number | null>(null);
+  const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -96,50 +130,49 @@ export default function ReaderView({ readerId }: ReaderViewProps) {
   };
 
   if (loading) {
-    return (
-      <Container>
-        <Header>
-          <Title>Loading...</Title>
-        </Header>
-      </Container>
-    );
+    return <Desktop />;
   }
 
   return (
-    <Container>
-      <Header>
-        <Title>BookBeta</Title>
-      </Header>
-      <Main>
-        <Sidebar
-          initial={{ x: -280 }}
-          animate={{ x: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        >
-          <ChapterList>
-            {chapters.map((chapter) => (
-              <ChapterItem
-                key={chapter.id}
-                $active={chapter.id === currentChapterId}
-                onClick={() => setCurrentChapterId(chapter.id)}
-              >
-                {chapter.title}
-              </ChapterItem>
-            ))}
-          </ChapterList>
-        </Sidebar>
-        <Content>
-          <AnimatePresence mode="wait">
-            {currentChapterId && (
-              <ChapterReader
-                key={currentChapterId}
-                chapterId={currentChapterId}
-                readerId={readerId}
-              />
-            )}
-          </AnimatePresence>
-        </Content>
-      </Main>
-    </Container>
+    <Desktop>
+      <Shell>
+        <Panel>
+          <ContentArea>
+            <AnimatePresence mode="wait">
+              {currentChapterId && (
+                <ChapterReader
+                  key={currentChapterId}
+                  chapterId={currentChapterId}
+                  sessionId={sessionId}
+                />
+              )}
+            </AnimatePresence>
+          </ContentArea>
+
+          <Sidebar
+            initial={{ x: 220 }}
+            animate={{ x: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          >
+            <SidebarHeader>
+              <SidebarTitle>Chapters</SidebarTitle>
+            </SidebarHeader>
+            <ChapterList>
+              {chapters.map(chapter => (
+                <ChapterItem
+                  key={chapter.id}
+                  $active={chapter.id === currentChapterId}
+                  onClick={() => setCurrentChapterId(chapter.id)}
+                >
+                  <ChapterItemTitle $active={chapter.id === currentChapterId}>
+                    {chapter.title}
+                  </ChapterItemTitle>
+                </ChapterItem>
+              ))}
+            </ChapterList>
+          </Sidebar>
+        </Panel>
+      </Shell>
+    </Desktop>
   );
 }

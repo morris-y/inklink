@@ -1,257 +1,101 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import styled from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
+import { SavedFeedback } from './ChapterReader';
 
-const Popover = styled(motion.div)<{ $x: number; $y: number }>`
+const Popover = styled.div`
   position: fixed;
-  left: ${props => props.$x}px;
-  top: ${props => props.$y}px;
-  transform: translate(1rem, -50%);
+  transform: translate(-50%, calc(-100% - 8px));
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
   padding: 0.5rem;
   z-index: 10000;
-  min-width: 280px;
-  max-width: 320px;
   user-select: none;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-right: 8px solid white;
-    filter: drop-shadow(-2px 0 2px rgba(0, 0, 0, 0.05));
-  }
+  min-width: 180px;
 `;
 
-const ButtonRow = styled.div`
+const Row = styled.div`
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  align-items: center;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'like' | 'dislike' }>`
-  padding: 0.5rem 1rem;
+const Btn = styled.button<{ $variant?: 'delete' | 'active' }>`
+  padding: 0.4rem 0.7rem;
   border: none;
-  background: ${props =>
-    props.$variant === 'like' ? '#e8f5e9' :
-    props.$variant === 'dislike' ? '#ffebee' :
-    '#f5f5f5'};
-  color: ${props =>
-    props.$variant === 'like' ? '#2e7d32' :
-    props.$variant === 'dislike' ? '#c62828' :
-    '#1a1a1a'};
-  border-radius: 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 80px;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 0.875rem;
   font-family: inherit;
-  resize: vertical;
-  margin-top: 0.5rem;
-  user-select: text;
-
-  &:focus {
-    outline: none;
-    border-color: #1a1a1a;
-  }
+  background: ${p =>
+    p.$variant === 'delete' ? '#fff0f0' :
+    p.$variant === 'active' ? '#f0f0f0' :
+    '#f5f5f5'};
+  color: ${p => p.$variant === 'delete' ? '#c62828' : '#1a1a1a'};
+  transition: filter 0.12s;
+  &:hover { filter: brightness(0.93); }
 `;
 
-const SubmitButton = styled.button`
-  width: 100%;
-  padding: 0.625rem;
-  background: #1a1a1a;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 0.5rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #333;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+const CommentPreview = styled.div`
+  font-size: 0.78rem;
+  color: #555;
+  padding: 0.35rem 0.5rem 0.1rem;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
-const CancelButton = styled.button`
-  width: 100%;
-  padding: 0.5rem;
-  background: transparent;
-  color: #666;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  margin-top: 0.25rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #1a1a1a;
-    background: #f5f5f5;
-  }
+const Hint = styled.div`
+  font-size: 0.68rem;
+  color: #aaa;
+  padding: 0.3rem 0.5rem 0.1rem;
 `;
 
-interface FeedbackPopoverProps {
-  selectedText: {
-    text: string;
-    start: number;
-    end: number;
-    x: number;
-    y: number;
-  };
-  onSubmit: (
-    type: 'like' | 'dislike' | 'comment' | 'edit',
-    comment?: string,
-    suggestedEdit?: string
-  ) => void;
+export interface FeedbackPopoverProps {
+  feedback: SavedFeedback;
+  x: number;
+  y: number;
+  onToggleReaction: () => void;
+  onDelete: () => void;
   onClose: () => void;
 }
 
-export default function FeedbackPopover({ selectedText, onSubmit, onClose }: FeedbackPopoverProps) {
-  const [mode, setMode] = useState<'actions' | 'comment' | 'edit' | null>('actions');
-  const [commentText, setCommentText] = useState('');
-  const [editText, setEditText] = useState(selectedText.text);
+export default function FeedbackPopover({ feedback, x, y, onToggleReaction, onDelete, onClose }: FeedbackPopoverProps) {
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-feedback-popover]')) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
 
-  const handleQuickAction = (type: 'like' | 'dislike') => {
-    onSubmit(type);
-  };
-
-  const handleCommentSubmit = () => {
-    if (commentText.trim()) {
-      onSubmit('comment', commentText);
-    }
-  };
-
-  const handleEditSubmit = () => {
-    if (editText.trim() && editText !== selectedText.text) {
-      onSubmit('edit', undefined, editText);
-    }
-  };
+  const reactionIcon = feedback.type === 'dislike' ? '👎' : '👍';
+  const toggleIcon = feedback.type === 'dislike' ? '👍' : '👎';
 
   return (
-    <Popover
+    <div
       data-feedback-popover
-      $x={selectedText.x}
-      $y={selectedText.y}
-      initial={{ opacity: 0, scale: 0.9, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
+      style={{ position: 'fixed', left: x, top: y, zIndex: 10000 }}
+      onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
     >
-      <AnimatePresence mode="wait">
-        {mode === 'actions' && (
-          <motion.div
-            key="actions"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <ButtonRow>
-              <ActionButton
-                $variant="like"
-                onClick={() => handleQuickAction('like')}
-              >
-                👍 Like
-              </ActionButton>
-              <ActionButton
-                $variant="dislike"
-                onClick={() => handleQuickAction('dislike')}
-              >
-                👎 Dislike
-              </ActionButton>
-            </ButtonRow>
-            <ButtonRow style={{ marginTop: '0.5rem' }}>
-              <ActionButton onClick={() => setMode('comment')}>
-                💬 Comment
-              </ActionButton>
-              <ActionButton onClick={() => setMode('edit')}>
-                ✏️ Suggest Edit
-              </ActionButton>
-            </ButtonRow>
-            <CancelButton onClick={onClose}>Cancel</CancelButton>
-          </motion.div>
+      <Popover>
+        <Row>
+          <Btn $variant="active">{reactionIcon}</Btn>
+          <Btn onClick={onToggleReaction}>Switch to {toggleIcon}</Btn>
+          <Btn $variant="delete" onClick={onDelete}>Delete</Btn>
+        </Row>
+        {feedback.comment && (
+          <CommentPreview>💬 {feedback.comment}</CommentPreview>
         )}
-
-        {mode === 'comment' && (
-          <motion.div
-            key="comment"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <TextArea
-              placeholder="What do you think about this passage?"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              autoFocus
-            />
-            <SubmitButton
-              onClick={handleCommentSubmit}
-              disabled={!commentText.trim()}
-            >
-              Submit Comment
-            </SubmitButton>
-            <CancelButton onClick={() => setMode('actions')}>Back</CancelButton>
-          </motion.div>
-        )}
-
-        {mode === 'edit' && (
-          <motion.div
-            key="edit"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <TextArea
-              placeholder="Suggest how to improve this passage..."
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              autoFocus
-            />
-            <SubmitButton
-              onClick={handleEditSubmit}
-              disabled={!editText.trim() || editText === selectedText.text}
-            >
-              Submit Edit
-            </SubmitButton>
-            <CancelButton onClick={() => setMode('actions')}>Back</CancelButton>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Popover>
+        <Hint>Del/Backspace to delete · Esc to close</Hint>
+      </Popover>
+    </div>
   );
 }

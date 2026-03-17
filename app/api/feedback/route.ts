@@ -1,52 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createFeedback, getReader, createReader } from '@/lib/db';
 
-export async function POST(request: Request) {
-  try {
-    const {
-      readerId,
-      chapterId,
-      snippetText,
-      snippetStart,
-      snippetEnd,
-      feedbackType,
-      comment,
-      suggestedEdit,
-      abTestId,
-      abTestVersion,
-      wordId, // ADDED: for version tracking
-      createdAtCommit, // ADDED: commit SHA when feedback created
-    } = await request.json();
-
-    // Validate required fields
-    if (!readerId || !chapterId || !snippetText || snippetStart === undefined || snippetEnd === undefined || !feedbackType) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // Ensure reader exists in database (create if needed)
-    let reader = getReader(readerId);
-    if (!reader) {
-      reader = createReader(readerId);
-    }
-
-    const feedback = createFeedback(
-      readerId,
-      chapterId,
-      snippetText,
-      snippetStart,
-      snippetEnd,
-      feedbackType,
-      comment,
-      suggestedEdit,
-      abTestId,
-      abTestVersion,
-      wordId, // ADDED
-      createdAtCommit // ADDED
-    );
-
-    return NextResponse.json({ feedback });
-  } catch (error) {
-    console.error('Error creating feedback:', error);
-    return NextResponse.json({ error: 'Failed to create feedback' }, { status: 500 });
-  }
+// Legacy feedback route — use /api/public/reactions, /api/public/comments,
+// or /api/public/suggestions instead.
+export async function POST() {
+  return NextResponse.json(
+    { error: 'This endpoint is deprecated. Use /api/public/reactions, /api/public/comments, or /api/public/suggestions.' },
+    { status: 410 }
+  );
 }

@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getAllChapters } from '@/lib/chapters';
-import { getAllChapters as getDBChapters, upsertChapter } from '@/lib/db';
+import sql from '@/lib/db/client';
 
 export async function GET() {
   try {
-    // Get chapters from markdown files
-    const fileChapters = getAllChapters();
+    const workSlug = process.env.BOOK_SLUG || 'default';
+    const chapters = await sql`
+      SELECT c.id, c.slug, c.title, c.file_path as filename, c.sort_order as "order", c.created_at
+      FROM chapters c
+      JOIN works w ON w.id = c.work_id
+      WHERE w.slug = ${workSlug}
+      ORDER BY c.sort_order
+    `;
 
-    // Sync with database
-    const dbChapters = fileChapters.map(chapter => {
-      return upsertChapter(chapter.filename, chapter.metadata.title, chapter.metadata.order);
-    });
-
-    return NextResponse.json({ chapters: dbChapters });
+    return NextResponse.json({ chapters });
   } catch (error) {
     console.error('Error fetching chapters:', error);
     return NextResponse.json({ error: 'Failed to fetch chapters' }, { status: 500 });

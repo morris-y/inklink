@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAtom } from 'jotai';
-import { Feedback, Chapter } from '@/types';
+import { Chapter } from '@/types';
 import LikesHeatmapView from './LikesHeatmapView';
 import CommentsView from './CommentsView';
 import VersionTimeline from './VersionTimeline';
@@ -17,13 +17,14 @@ const SURFACE_TEXTURE = css`
   background-repeat: repeat;
   background-size: 100px 100px;
 `;
+const INACTIVE_TAB_SURFACE = '#e2ddd4';
 
 /* ─── Desktop ────────────────────────────────────────────────────────────── */
 
 const Desktop = styled.div`
   min-height: 100vh;
   padding: 3% 10% 10% 10%;
-  background-color: #d3dae3;
+  background-color: #302f2f;
   display: flex;
   flex-direction: column;
 `;
@@ -62,16 +63,16 @@ const FolderTab = styled.button<{ $active: boolean; $isLeft: boolean }>`
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   ${SURFACE_TEXTURE}
-  background-color: ${p => p.$active ? SURFACE_BASE : 'rgba(245,241,232,0.78)'};
-  color: ${p => p.$active ? '#1a1a18' : 'rgba(26,26,24,0.4)'};
+  background-color: ${p => p.$active ? SURFACE_BASE : INACTIVE_TAB_SURFACE};
+  color: ${p => p.$active ? '#1a1a18' : 'rgba(26,26,24,0.5)'};
   z-index: ${p => p.$active ? 2 : 1};
   /* Bridge: 1px overlap with panel erases the seam */
   margin-bottom: ${p => p.$active ? '-1px' : '0'};
   /* Inset highlight gives the tab a formed feel */
-  ${p => p.$active && css`box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 0 ${SURFACE_BASE};`}
+  ${p => p.$active && css`box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);`}
 
   &:hover {
-    background-color: ${p => p.$active ? SURFACE_BASE : 'rgba(245,241,232,0.9)'};
+    background-color: ${p => p.$active ? SURFACE_BASE : '#ebe6dd'};
     color: rgba(26,26,24,0.8);
   }
 
@@ -80,13 +81,12 @@ const FolderTab = styled.button<{ $active: boolean; $isLeft: boolean }>`
     &::after {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: -1px;
       right: -6px;
       width: 6px;
       height: 6px;
-      background: transparent;
+      ${SURFACE_TEXTURE}
       border-bottom-left-radius: 6px;
-      box-shadow: -3px 3px 0 0 ${SURFACE_BASE};
       pointer-events: none;
       z-index: 3;
     }
@@ -97,26 +97,24 @@ const FolderTab = styled.button<{ $active: boolean; $isLeft: boolean }>`
     &::before {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: -1px;
       left: -6px;
       width: 6px;
       height: 6px;
-      background: transparent;
+      ${SURFACE_TEXTURE}
       border-bottom-right-radius: 6px;
-      box-shadow: 3px 3px 0 0 ${SURFACE_BASE};
       pointer-events: none;
       z-index: 3;
     }
     &::after {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: -1px;
       right: -6px;
       width: 6px;
       height: 6px;
-      background: transparent;
+      ${SURFACE_TEXTURE}
       border-bottom-left-radius: 6px;
-      box-shadow: -3px 3px 0 0 ${SURFACE_BASE};
       pointer-events: none;
       z-index: 3;
     }
@@ -336,19 +334,114 @@ const PreComputeIndicator = styled.div<{ $status: 'computing' | 'complete' | 'er
   gap: 0.5rem;
 `;
 
+/* ─── Login overlay ───────────────────────────────────────────────────────── */
+
+const LoginOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(20,18,16,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+`;
+
+const LoginCard = styled.div`
+  background: #fcfcfc;
+  border-radius: 8px;
+  padding: 2.5rem 2.5rem 2rem;
+  width: 320px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const LoginTitle = styled.h2`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  font-style: italic;
+  color: #1a1a18;
+  margin: 0 0 0.25rem;
+`;
+
+const LoginInput = styled.input`
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(26,26,24,0.18);
+  border-radius: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+  &:focus { border-color: rgba(26,26,24,0.45); }
+`;
+
+const LoginButton = styled.button`
+  padding: 0.6rem 1rem;
+  background: #1a1a18;
+  color: #f2ede4;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover { background: #3a3a36; }
+`;
+
+const LoginError = styled.p`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.78rem;
+  color: #b94a36;
+  margin: 0;
+`;
+
 /* ─── Component ───────────────────────────────────────────────────────────── */
 
 type ViewType = 'likes' | 'comments';
 
+interface HeatmapLine {
+  lineNumber: number;
+  lineText: string;
+  likeCount: number;
+  dislikeCount: number;
+  commentCount: number;
+  readerReachPercent: number;
+}
+
+interface DashComment {
+  id: string;
+  start_line: number;
+  end_line: number;
+  body: string;
+  created_at: string;
+  reader_name: string | null;
+  reader_slug: string | null;
+}
+
+interface DashSuggestion {
+  id: string;
+  start_line: number;
+  end_line: number;
+  original_text: string;
+  suggested_text: string;
+  rationale: string | null;
+  created_at: string;
+  reader_name: string | null;
+}
+
 export default function AuthorDashboard() {
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [shareUrl, setShareUrl] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
-  const [chapterContent, setChapterContent] = useState<string>('');
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+  const [chapterVersionId, setChapterVersionId] = useState<string | null>(null);
   const [chapterHtml, setChapterHtml] = useState<string>('');
-  const [contentChapterId, setContentChapterId] = useState<number | null>(null);
+  const [contentChapterId, setContentChapterId] = useState<string | null>(null);
   const [displayedCommitSha, setDisplayedCommitSha] = useState<string>('');
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('likes');
@@ -356,11 +449,17 @@ export default function AuthorDashboard() {
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
   const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
   const [, setPreComputeProgress] = useState(0);
+  const [heatmapLines, setHeatmapLines] = useState<HeatmapLine[]>([]);
+  const [dashComments, setDashComments] = useState<DashComment[]>([]);
+  const [dashSuggestions, setDashSuggestions] = useState<DashSuggestion[]>([]);
+  const [needsLogin, setNeedsLogin] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
-    fetchFeedback();
     fetchChapters();
     generateShareUrl();
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -371,7 +470,14 @@ export default function AuthorDashboard() {
     }
   }, [selectedChapterId]);
 
-  const startPreComputation = async (chapterId: number) => {
+  useEffect(() => {
+    if (chapterVersionId) {
+      fetchHeatmap(chapterVersionId);
+      fetchChapterFeedback(chapterVersionId);
+    }
+  }, [chapterVersionId]);
+
+  const startPreComputation = async (chapterId: string) => {
     try {
       const statusResponse = await fetch(`/api/chapters/${chapterId}/precompute`);
       const statusData = await statusResponse.json();
@@ -393,15 +499,54 @@ export default function AuthorDashboard() {
     }
   };
 
-  const fetchFeedback = async () => {
+  const fetchHeatmap = async (versionId: string) => {
     try {
-      const response = await fetch('/api/admin/feedback');
-      const data = await response.json();
-      setFeedback(data.feedback);
-    } catch (error) {
-      console.error('Error fetching feedback:', error);
-    } finally {
-      setLoading(false);
+      console.log('[dashboard] fetching heatmap for versionId:', versionId);
+      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/heatmap`);
+      if (res.status === 401) { setNeedsLogin(true); return; }
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[dashboard] heatmap lines:', data.heatmap?.length, 'totalReaders:', data.totalReaders, 'reactions:', data.debug?.reactionRows, 'comments:', data.debug?.commentRows);
+        setHeatmapLines(data.heatmap || []);
+      } else {
+        console.error('[dashboard] heatmap fetch failed:', res.status, await res.text());
+      }
+    } catch (err) {
+      console.error('Error fetching heatmap:', err);
+    }
+  };
+
+  const fetchChapterFeedback = async (versionId: string) => {
+    try {
+      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/feedback`);
+      if (res.status === 401) { setNeedsLogin(true); return; }
+      if (res.ok) {
+        const data = await res.json();
+        setDashComments(data.comments || []);
+        setDashSuggestions(data.suggestions || []);
+      }
+    } catch (err) {
+      console.error('Error fetching feedback:', err);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    const res = await fetch('/api/dashboard/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: loginPassword }),
+    });
+    if (res.ok) {
+      setNeedsLogin(false);
+      setLoginPassword('');
+      if (chapterVersionId) {
+        fetchHeatmap(chapterVersionId);
+        fetchChapterFeedback(chapterVersionId);
+      }
+    } else {
+      setLoginError('Incorrect password');
     }
   };
 
@@ -418,7 +563,7 @@ export default function AuthorDashboard() {
     }
   };
 
-  const fetchChapterContent = async (chapterId: number, commitSha?: string) => {
+  const fetchChapterContent = async (chapterId: string, commitSha?: string) => {
     setLoadingChapter(true);
     try {
       const url = commitSha
@@ -428,10 +573,11 @@ export default function AuthorDashboard() {
       const data = await response.json();
       const nextCommitSha = commitSha || data.version?.commitSha || data.commitSha || '';
 
-      setChapterContent(data.content || '');
       setChapterHtml(data.html || '');
       setContentChapterId(chapterId);
       setDisplayedCommitSha(nextCommitSha);
+      console.log('[dashboard] chapter response keys:', Object.keys(data), 'versionId:', data.versionId);
+      if (data.versionId) setChapterVersionId(data.versionId);
 
       if (!commitSha) {
         setCurrentCommitSha(data.commitSha || '');
@@ -449,18 +595,11 @@ export default function AuthorDashboard() {
     }
   };
 
-  const handleApproveEdit = async (feedbackId: number) => { console.log('Approved edit:', feedbackId); };
-  const handleDiscardEdit = async (feedbackId: number) => { console.log('Discarded edit:', feedbackId); };
-
-  const chapterFeedback = selectedChapterId
-    ? feedback.filter(f => f.chapterId === selectedChapterId)
-    : [];
-
   const chapterStats = {
-    likes: chapterFeedback.filter(f => f.feedbackType === 'like').length,
-    dislikes: chapterFeedback.filter(f => f.feedbackType === 'dislike').length,
-    comments: chapterFeedback.filter(f => f.feedbackType === 'comment').length,
-    edits: chapterFeedback.filter(f => f.feedbackType === 'edit').length,
+    likes: heatmapLines.reduce((s, l) => s + l.likeCount, 0),
+    dislikes: heatmapLines.reduce((s, l) => s + l.dislikeCount, 0),
+    comments: dashComments.length,
+    edits: dashSuggestions.length,
   };
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId);
@@ -523,11 +662,6 @@ export default function AuthorDashboard() {
                 <ScrollableContent>
                   {shouldShowLoadingState ? (
                     <LoadingText>Loading chapter...</LoadingText>
-                  ) : chapterFeedback.length === 0 ? (
-                    <EmptyState>
-                      <h3>No feedback yet</h3>
-                      <p>Share your reader link to start collecting feedback</p>
-                    </EmptyState>
                   ) : (
                     <AnimatePresence mode="wait" initial={false}>
                       <ContentTransition
@@ -539,18 +673,15 @@ export default function AuthorDashboard() {
                       >
                         {activeView === 'likes' && (
                           <LikesHeatmapView
-                            chapterText={chapterContent}
                             chapterHtml={chapterHtml}
-                            feedback={chapterFeedback}
+                            heatmapLines={heatmapLines}
                           />
                         )}
                         {activeView === 'comments' && (
                           <CommentsView
-                            chapterText={chapterContent}
                             chapterHtml={chapterHtml}
-                            feedback={chapterFeedback}
-                            onApproveEdit={handleApproveEdit}
-                            onDiscardEdit={handleDiscardEdit}
+                            comments={dashComments}
+                            suggestions={dashSuggestions}
                           />
                         )}
                       </ContentTransition>
@@ -591,6 +722,25 @@ export default function AuthorDashboard() {
           {preComputeStatus === 'computing' && 'Pre-computing versions...'}
           {preComputeStatus === 'error' && 'Pre-computation failed'}
         </PreComputeIndicator>
+      )}
+
+      {needsLogin && (
+        <LoginOverlay>
+          <LoginCard>
+            <LoginTitle>Dashboard Login</LoginTitle>
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <LoginInput
+                type="password"
+                placeholder="Password"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                autoFocus
+              />
+              {loginError && <LoginError>{loginError}</LoginError>}
+              <LoginButton type="submit">Sign in</LoginButton>
+            </form>
+          </LoginCard>
+        </LoginOverlay>
       )}
     </Desktop>
   );

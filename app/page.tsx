@@ -180,12 +180,12 @@ export default function Home() {
         <Left>
           <Headline>
             Introducing
-            <em>Inkstain.</em>
+            <em>Inklink.</em>
           </Headline>
 
           <Body>
-            BookBeta collects word-level reactions from your readers, tracks every revision, and shows you exactly
-            where your writing lands.
+            Inklink makes collecting reader feedback as easy as sharing a link. We track word-level reactions, retention rates, and email addresses from interested readers, 
+            and show you exactly where and how your writing hits (and where it doesn't).
           </Body>
 
           <CTARow>

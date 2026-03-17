@@ -85,7 +85,7 @@ interface Version {
 }
 
 interface VersionTimelineProps {
-  chapterId: number;
+  chapterId: string;
   currentCommitSha: string;
   onVersionChange: (commitSha: string) => void;
 }

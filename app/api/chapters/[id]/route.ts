@@ -1,57 +1,45 @@
 import { NextResponse } from 'next/server';
-import { getChapterById, getABTestsForChapter, getOrCreateABTestAssignment } from '@/lib/db';
-import { getChapterData } from '@/lib/chapters';
-import { getCurrentCommitForFile } from '@/lib/git';
+import sql from '@/lib/db/client';
 
 export async function GET(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
-    const chapterId = parseInt(id);
-    const { searchParams } = new URL(request.url);
-    const readerId = searchParams.get('readerId');
 
-    const chapter = getChapterById(chapterId);
-    if (!chapter) {
+    // Look up chapter by id (uuid) or slug
+    const chapters = await sql`
+      SELECT cv.id as version_id, c.id, c.slug, c.title, c.file_path as filename, c.sort_order as "order",
+             cv.raw_markdown as content, cv.rendered_html as html, dv.commit_sha as "commitSha"
+      FROM chapters c
+      JOIN chapter_versions cv ON cv.chapter_id = c.id
+      JOIN document_versions dv ON dv.id = cv.document_version_id
+      WHERE (c.id = ${id} OR c.slug = ${id})
+      ORDER BY dv.deployed_at DESC
+      LIMIT 1
+    `;
+
+    if (chapters.length === 0) {
       return NextResponse.json({ error: 'Chapter not found' }, { status: 404 });
     }
 
-    // Get chapter content from file
-    const chapterData = getChapterData(chapter.filename);
-    if (!chapterData) {
-      return NextResponse.json({ error: 'Chapter file not found' }, { status: 404 });
-    }
-
-    // Get current commit SHA for version tracking
-    let commitSha: string | null = null;
-    try {
-      commitSha = await getCurrentCommitForFile(chapter.filename);
-    } catch (error) {
-      console.warn('Could not get current commit for chapter:', error);
-      // Continue without commit SHA if git is not available
-    }
-
-    // Get A/B tests for this chapter
-    const abTests = getABTestsForChapter(chapterId);
-
-    // If reader ID is provided, get their assignments
-    let assignments: Record<number, 'A' | 'B'> = {};
-    if (readerId && abTests.length > 0) {
-      abTests.forEach(test => {
-        const assignment = getOrCreateABTestAssignment(test.id, readerId);
-        assignments[test.id] = assignment.assignedVersion;
-      });
-    }
+    const chapter = chapters[0];
 
     return NextResponse.json({
-      chapter,
-      content: chapterData.content,
-      html: chapterData.html,
-      commitSha, // ADDED: Current commit SHA for version tracking
-      abTests,
-      assignments,
+      chapter: {
+        id: chapter.id,
+        slug: chapter.slug,
+        title: chapter.title,
+        filename: chapter.filename,
+        order: chapter.order,
+      },
+      versionId: chapter.version_id,
+      content: chapter.content,
+      html: chapter.html,
+      commitSha: chapter.commitSha,
+      abTests: [],
+      assignments: {},
     });
   } catch (error) {
     console.error('Error fetching chapter:', error);
