@@ -1,6 +1,6 @@
 ---
 title: "chapter I"
-order: I
+order: 1
 ---
 
 Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that easy.

@@ -208,6 +208,46 @@ async function main() {
   const workId = work.id as string;
   console.log(`✓ work: ${workTitle} (${workId.slice(0, 8)}…)`);
 
+  // ── Wipe all existing data for this work so re-runs are fully idempotent ──────
+  console.log('\n🗑  Wiping existing data for this work…');
+  await sql`
+    DELETE FROM feedback_reactions WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM feedback_comments WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM suggested_edits WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM chapter_reads WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM chapter_version_lines WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM chapter_diffs WHERE chapter_version_id IN (
+      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
+    )
+  `;
+  await sql`
+    DELETE FROM chapter_versions WHERE chapter_id IN (
+      SELECT id FROM chapters WHERE work_id = ${workId}
+    )
+  `;
+  await sql`DELETE FROM document_versions WHERE work_id = ${workId}`;
+  console.log('  ✓ wiped');
+
   // ── Historical commit backfill ──────────────────────────────────────────────
   console.log('\n📖 Ingesting historical commits…');
 
@@ -223,7 +263,7 @@ async function main() {
   // Process oldest → newest
   const orderedCommits = [...commits].reverse();
 
-  const chapterFiles = ['chapter-01.md', 'chapter-02.md'];
+  const chapterFiles = ['chapter-01.md', 'chapter-02.md', 'chapter-03.md'];
   const documentVersionIds: string[] = [];
 
   for (const commit of orderedCommits) {
@@ -333,13 +373,6 @@ async function main() {
     process.exit(1);
   }
 
-  // Clear previously seeded feedback so re-runs are idempotent
-  for (const sessionId of sessionIds) {
-    await sql`DELETE FROM feedback_reactions WHERE reader_session_id = ${sessionId}`;
-    await sql`DELETE FROM feedback_comments  WHERE reader_session_id = ${sessionId}`;
-    await sql`DELETE FROM suggested_edits    WHERE reader_session_id = ${sessionId}`;
-    await sql`DELETE FROM chapter_reads      WHERE reader_session_id = ${sessionId}`;
-  }
 
   // Chapter 1 reactions
   const c1Reactions: Array<[number, number, 'like' | 'dislike', number]> = [
