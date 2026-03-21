@@ -1,7 +1,13 @@
 import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
 import { htmlToTextContent } from '../lib/db/charPos.js';
-import { feedbackWordPos } from '../lib/db/wordPos.js';
+import { htmlToWords } from '../lib/db/wordPos.js';
+
+function normalizeQuotes(s: string): string {
+  return s
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"');
+}
 
 async function main() {
   const sql = neon(process.env.DATABASE_URL!);
@@ -14,38 +20,36 @@ async function main() {
     ORDER BY dv.deployed_at DESC LIMIT 1
   `;
 
+  const words = htmlToWords(latestVer.rendered_html);
   const text = htmlToTextContent(latestVer.rendered_html);
 
-  // Check the two null-char_start comments
-  const nullRows = await sql`
-    SELECT selected_text FROM feedback_comments
-    WHERE chapter_version_id = ${latestVer.id} AND char_start IS NULL
-  `;
+  // Test bees' nest
+  const needle1 = "Did you eat a bees' nest? Is this belly filled with cleverness and honey?";
+  const normNeedle1 = normalizeQuotes(needle1);
+  console.log('needle1:', JSON.stringify(normNeedle1));
 
-  for (const row of nullRows) {
-    const needle = row.selected_text as string;
-    console.log('needle:', JSON.stringify(needle.slice(0, 60)));
-
-    // Try exact search in text
-    const idx = text.indexOf(needle);
-    console.log('  text.indexOf:', idx);
-
-    // Try feedbackWordPos
-    const wp = feedbackWordPos(latestVer.rendered_html, needle);
-    console.log('  feedbackWordPos:', wp);
-
-    // Look for the first word in the text
-    const firstWord = needle.split(/\s+/)[0];
-    const wordIdx = text.indexOf(firstWord);
-    console.log('  first word:', JSON.stringify(firstWord), 'found at:', wordIdx);
-    if (wordIdx >= 0) {
-      console.log('  text at that spot:', JSON.stringify(text.slice(wordIdx, wordIdx + 80)));
-      // Show char codes around that area
-      const problematic = text.slice(wordIdx, wordIdx + 30);
-      const codes = [...problematic].map((c, i) => `${i}:${c.codePointAt(0)}`).join(', ');
-      console.log('  char codes:', codes);
+  // Find "Did" word index
+  const didIdx = words.findIndex(w => w === 'Did');
+  console.log('"Did" word index:', didIdx);
+  if (didIdx >= 0) {
+    // Build joined from that index
+    let joined = '';
+    for (let j = didIdx; j < Math.min(didIdx + 20, words.length); j++) {
+      joined = j === didIdx ? words[j] : joined + ' ' + words[j];
+      const normJoined = normalizeQuotes(joined);
+      console.log(`  j=${j} joined="${normJoined.slice(0, 50)}" len=${joined.length} match=${normJoined === normNeedle1}`);
+      if (normJoined === normNeedle1) { console.log('  MATCH at j=', j); break; }
     }
-    console.log('');
+  }
+
+  console.log('');
+
+  // Check what text is around "honey?" in the chapter
+  const honeyIdx = text.indexOf('honey?');
+  if (honeyIdx >= 0) {
+    console.log('text around honey?:', JSON.stringify(text.slice(honeyIdx - 5, honeyIdx + 20)));
+    const codes = [...text.slice(honeyIdx, honeyIdx + 10)].map((c, i) => `${i}:${c.codePointAt(0)}`).join(', ');
+    console.log('char codes:', codes);
   }
 }
 

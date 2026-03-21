@@ -31,13 +31,23 @@ export function feedbackWordPos(
   const words = htmlToWords(renderedHtml);
   const needle = normalizeQuotes(selectedText.trim());
 
+  // Closing punctuation that may be attached to the last word in the HTML
+  // but not included in the user's selected text
+  const trailingClosePunct = /^["""''»)\]>!?.,;:\s]*$/;
+
   for (let i = 0; i < words.length; i++) {
     // Try joining increasing numbers of words until we match or overshoot
     let joined = '';
     for (let j = i; j < words.length; j++) {
       joined = j === i ? words[j] : joined + ' ' + words[j];
-      if (normalizeQuotes(joined) === needle) return { wordStart: i, wordEnd: j };
-      if (joined.length > needle.length + 20) break; // +20 slack for quote length differences
+      const normJoined = normalizeQuotes(joined);
+      if (normJoined === needle) return { wordStart: i, wordEnd: j };
+      // Also match if the joined text starts with the needle and only has
+      // trailing close-punctuation beyond it (e.g. closing curly quote attached to last word)
+      if (normJoined.startsWith(needle) && trailingClosePunct.test(normJoined.slice(needle.length))) {
+        return { wordStart: i, wordEnd: j };
+      }
+      if (joined.length > needle.length + 20) break;
     }
   }
   return null;
