@@ -241,7 +241,8 @@ function charWrap(
         const localStart = overlapStart - charPos;
         const localEnd = overlapEnd - charPos;
         const el = makeEl();
-        el.textContent = text.slice(localStart, localEnd);
+        // Preserve textContent if already set by callback (e.g. suggestion preview)
+        if (!el.textContent) el.textContent = text.slice(localStart, localEnd);
         const before = document.createTextNode(text.slice(0, localStart));
         const after = document.createTextNode(text.slice(localEnd));
         node.parentNode?.insertBefore(before, node);
@@ -328,10 +329,17 @@ function processHtml(
         len = s.original_text.length;
       }
       if (idx !== -1) {
+        let first = true;
         charWrap(div, idx, len, () => {
           const span = document.createElement('span');
-          span.className = 'suggestion-preview';
-          span.textContent = s.suggested_text;
+          if (first) {
+            span.className = 'suggestion-preview';
+            span.textContent = s.suggested_text;
+            first = false;
+          } else {
+            // Hide subsequent text nodes in the range — the first span shows the full replacement
+            span.style.display = 'none';
+          }
           return span;
         });
       }
@@ -392,12 +400,17 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
 
   // Scroll text panel to the mark containing the hovered panel item
   useEffect(() => {
-    if (!hoveredPanelId || !textPanelRef.current) return;
-    const marks = Array.from(textPanelRef.current.querySelectorAll('[data-item-ids]'));
+    const container = textPanelRef.current;
+    if (!hoveredPanelId || !container) return;
+    const marks = Array.from(container.querySelectorAll('[data-item-ids]'));
     const mark = marks.find(m =>
       (m as HTMLElement).dataset.itemIds!.split(',').includes(hoveredPanelId),
-    );
-    mark?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ) as HTMLElement | undefined;
+    if (!mark) return;
+    // Scroll within the TextPanel only, centering the mark
+    const markTop = mark.offsetTop - container.offsetTop;
+    const target = markTop - container.clientHeight / 2 + mark.offsetHeight / 2;
+    container.scrollTo({ top: target, behavior: 'smooth' });
   }, [hoveredPanelId]);
 
   const processedHtml = useMemo(

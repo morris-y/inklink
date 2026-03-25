@@ -9,7 +9,7 @@ import ChapterText from './ChapterText';
 export interface HeatmapRange {
   charStart: number;
   charLength: number;
-  type: 'like' | 'dislike' | 'comment';
+  type: 'like' | 'dislike';
   count: number;
   readerNames: string[];
 }
@@ -41,7 +41,7 @@ interface OverlayRect {
   left: number;
   width: number;
   height: number;
-  type: 'like' | 'dislike' | 'comment';
+  type: 'like' | 'dislike';
   rangeIndex: number;
 }
 
@@ -68,16 +68,16 @@ const OverlayLayer = styled.div`
   z-index: 0;
 `;
 
-const OVERLAY_ALPHA = 0.09;
+const OVERLAY_ALPHA = 0.18;
 
 const OverlayRectDiv = styled.div<{ $type: string }>`
   position: absolute;
   border-radius: 3px;
   pointer-events: none;
   background-color: ${p =>
-    p.$type === 'like'    ? `rgba(80, 200, 80, ${OVERLAY_ALPHA})` :
-    p.$type === 'dislike' ? `rgba(200, 80, 80, ${OVERLAY_ALPHA})` :
-                            `rgba(100, 130, 255, ${OVERLAY_ALPHA})`};
+    p.$type === 'like'
+      ? `rgba(80, 200, 80, ${OVERLAY_ALPHA})`
+      : `rgba(200, 80, 80, ${OVERLAY_ALPHA})`};
 `;
 
 const Tooltip = styled.div.attrs<{ $x: number; $y: number }>(p => ({
@@ -272,12 +272,10 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
     const lines: string[] = [];
     const likes = hits.filter(h => h.type === 'like');
     const dislikes = hits.filter(h => h.type === 'dislike');
-    const comments = hits.filter(h => h.type === 'comment');
 
     for (const { label, items } of [
       { label: 'Liked by', items: likes },
       { label: 'Disliked by', items: dislikes },
-      { label: 'Commented on by', items: comments },
     ]) {
       if (items.length === 0) continue;
       const totalCount = items.reduce((s, i) => s + i.count, 0);

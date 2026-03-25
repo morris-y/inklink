@@ -110,6 +110,6 @@ Hesypera found her voice again.
 
 “We didn’t stay around to find out.”
 
-Hesypera thought of the Lady Oelyxena, laughing and good natured, the way the youth seemed sapped from her face even though she wasn’t that old. Hesypera, with her childhood habit of moving quietly in the dark, had seen the sudden tears Olyxena wept sometimes, the weariness of her movements when she thought she was alone.
+Hesypera thought of the Lady Oelyxena, laughing and good natured, the way the youth seemed sapped from her face even though she wasn’t that old. 
 
 Her heart wrung with pity. *I’ll be nice to Eurydice, even if she’s strange, for Oelyxena’s sake.*

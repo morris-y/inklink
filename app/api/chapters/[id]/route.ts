@@ -40,8 +40,6 @@ export async function GET(
       commitSha: chapter.commitSha,
       abTests: [],
       assignments: {},
-    }, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
   } catch (error) {
     console.error('Error fetching chapter:', error);

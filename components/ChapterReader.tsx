@@ -18,17 +18,31 @@ const Paper = styled(motion.div)`
   max-width: 900px;
   margin: 0 auto;
   position: relative;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 2rem 0 4rem;
+  }
 `;
 
 const ContentRow = styled.div`
   display: flex;
   gap: 3rem;
   align-items: flex-start;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0;
+  }
 `;
 
 const TextColumn = styled.div`
   flex: 1;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    padding: 0 2.5rem;
+  }
 `;
 
 const MarginColumn = styled.div`
@@ -36,6 +50,10 @@ const MarginColumn = styled.div`
   flex-shrink: 0;
   position: relative;
   align-self: stretch;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const ChapterTitle = styled.h2`
@@ -102,10 +120,36 @@ const ChapterContent = styled.div`
     border-bottom: 1.5px solid rgba(185,40,40,0.5);
   }
   mark.highlight-focused {
-    outline: 2px solid rgba(26,26,24,0.4);
-    outline-offset: 1px;
+    outline: none;
   }
   mark:hover { filter: brightness(0.88); }
+`;
+
+const SelectionToolbar = styled.div<{ $x: number; $y: number }>`
+  position: fixed;
+  left: ${p => p.$x}px;
+  top: ${p => p.$y}px;
+  transform: translate(-50%, -100%);
+  display: flex;
+  gap: 2px;
+  background: #1a1a18;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 100;
+`;
+
+const ToolbarBtn = styled.button<{ $active?: boolean }>`
+  background: ${p => p.$active ? 'rgba(255,255,255,0.15)' : 'transparent'};
+  border: none;
+  color: #e8e4dc;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  &:hover { background: rgba(255,255,255,0.12); }
 `;
 
 const EditHint = styled.div`
@@ -140,7 +184,6 @@ const MarginNoteTextarea = styled.textarea`
   outline: none;
   padding: 0;
   padding-left: 0.5rem;
-  border-left: 1px solid rgba(253,224,71,0.8);
 `;
 
 const SuccessToast = styled(motion.div)`
@@ -164,6 +207,10 @@ const ChapterNav = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 2.5rem 3rem;
+  }
 `;
 
 const NavButton = styled.button`
@@ -410,6 +457,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   const [suggEditMeta, setSuggEditMeta] = useState<{ originalText: string; charStart: number; charLength: number } | null>(null);
   const [editingNote, setEditingNote] = useState<EditingNote | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const [toastMessage, setToastMessage] = useState('');
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -422,7 +470,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   const focusedIdRef = useRef(focusedFeedbackId);
   const chapterDataRef = useRef(chapterData);
   const feedbackItemsRef = useRef(feedbackItems);
-  useEffect(() => { pendingRef.current = pending; }, [pending]);
+  useEffect(() => { pendingRef.current = pending; if (!pending) setToolbarPos(null); }, [pending]);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   useEffect(() => { focusedIdRef.current = focusedFeedbackId; }, [focusedFeedbackId]);
   useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
@@ -716,8 +764,8 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         setPending(prev => prev ? { ...prev, mode: prev.mode === 'like' ? 'dislike' : 'like' } : prev);
         return;
       }
-      // 'e' key → enter inline suggestion editing mode
-      if (e.key === 'e' && !e.ctrlKey && !e.metaKey && p.commentText.length === 0) {
+      // Tab → enter inline suggestion editing mode
+      if (e.key === 'Tab' && p.commentText.length === 0) {
         e.preventDefault();
         enterSuggestionModeRef.current(p.charStart, p.charLength, p.selectedText);
         return;
@@ -745,10 +793,11 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   // Mouse up handler
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target as Node;
+      const targetEl = target.nodeType === Node.ELEMENT_NODE ? target as HTMLElement : target.parentElement;
 
       // Ignore clicks inside margin column
-      if (target.closest('[data-margin-col]')) return;
+      if (targetEl?.closest('[data-margin-col]')) return;
 
       const selection = window.getSelection();
 
@@ -776,6 +825,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           commentText: '',
           anchorY,
         });
+        setToolbarPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
         setFocusedFeedbackId(null);
         return;
       }
@@ -787,7 +837,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       if (pendingRef.current) return;
 
       // Click on existing mark → focus it
-      const mark = target.closest('mark[data-feedback-id]') as HTMLElement | null;
+      const mark = targetEl?.closest('mark[data-feedback-id]') as HTMLElement | null;
       if (mark && mark.dataset.feedbackId) {
         setFocusedFeedbackId(mark.dataset.feedbackId);
         return;
@@ -941,6 +991,29 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       </ChapterNav>
 
       <div ref={scrollSentinelRef} style={{ height: 1 }} />
+
+      {/* Selection toolbar: like / dislike / edit */}
+      {pending && toolbarPos && !editMode && pending.commentText.length === 0 && (
+        <SelectionToolbar $x={toolbarPos.x} $y={toolbarPos.y}>
+          <ToolbarBtn
+            $active={pending.mode === 'like'}
+            onClick={() => { setPending(p => p ? { ...p, mode: 'like' } : p); }}
+          >
+            👍
+          </ToolbarBtn>
+          <ToolbarBtn
+            $active={pending.mode === 'dislike'}
+            onClick={() => { setPending(p => p ? { ...p, mode: 'dislike' } : p); }}
+          >
+            👎
+          </ToolbarBtn>
+          <ToolbarBtn
+            onClick={() => enterSuggestionModeRef.current(pending.charStart, pending.charLength, pending.selectedText)}
+          >
+            ✎
+          </ToolbarBtn>
+        </SelectionToolbar>
+      )}
 
       <AnimatePresence>
         {showSuccessToast && (

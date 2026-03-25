@@ -52,21 +52,21 @@ interface CommitInfo {
 }
 
 async function ingestCommit(workId: string, commit: CommitInfo, chapterFiles: string[]) {
-  // Skip if already ingested
+  // Reuse existing document_version or create a new one
   const existing = await sql`
     SELECT id FROM document_versions WHERE work_id = ${workId} AND commit_sha = ${commit.sha}
   `;
+  let documentVersionId: string;
   if (existing.length > 0) {
-    console.log(`  skip ${commit.sha.slice(0, 8)} (already ingested)`);
-    return existing[0].id as string;
+    documentVersionId = existing[0].id as string;
+  } else {
+    const [docVer] = await sql`
+      INSERT INTO document_versions (work_id, commit_sha, commit_message, commit_author, commit_created_at)
+      VALUES (${workId}, ${commit.sha}, ${commit.message}, ${commit.author}, ${commit.date})
+      RETURNING id
+    `;
+    documentVersionId = docVer.id as string;
   }
-
-  const [docVer] = await sql`
-    INSERT INTO document_versions (work_id, commit_sha, commit_message, commit_author, commit_created_at)
-    VALUES (${workId}, ${commit.sha}, ${commit.message}, ${commit.author}, ${commit.date})
-    RETURNING id
-  `;
-  const documentVersionId = docVer.id as string;
 
   const git = simpleGit(process.cwd());
 
@@ -286,8 +286,8 @@ async function main() {
   await ensureSchema();
 
   // Upsert work
-  const workSlug = process.env.BOOK_SLUG || 'default';
-  const workTitle = process.env.BOOK_TITLE || 'My Book';
+  const workSlug = 'orpheus';
+  const workTitle = 'After Eurydice';
   const [work] = await sql`
     INSERT INTO works (slug, title)
     VALUES (${workSlug}, ${workTitle})
@@ -297,8 +297,8 @@ async function main() {
   const workId = work.id as string;
   console.log(`✓ work: ${workTitle} (${workId.slice(0, 8)}…)`);
 
-  // ── Wipe all existing data for this work so re-runs are fully idempotent ──────
-  console.log('\n🗑  Wiping existing data for this work…');
+  // ── Wipe only feedback data (not document/chapter versions) ──────────────
+  console.log('\n🗑  Wiping feedback data for this work…');
   await sql`
     DELETE FROM feedback_reactions WHERE chapter_version_id IN (
       SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
@@ -319,25 +319,9 @@ async function main() {
       SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
     )
   `;
-  await sql`
-    DELETE FROM chapter_version_lines WHERE chapter_version_id IN (
-      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
-    )
-  `;
-  await sql`
-    DELETE FROM chapter_diffs WHERE chapter_version_id IN (
-      SELECT cv.id FROM chapter_versions cv JOIN chapters c ON c.id = cv.chapter_id WHERE c.work_id = ${workId}
-    )
-  `;
-  await sql`
-    DELETE FROM chapter_versions WHERE chapter_id IN (
-      SELECT id FROM chapters WHERE work_id = ${workId}
-    )
-  `;
-  await sql`DELETE FROM document_versions WHERE work_id = ${workId}`;
-  console.log('  ✓ wiped');
+  console.log('  ✓ wiped feedback data');
 
-  // ── Historical commit backfill ──────────────────────────────────────────────
+  // ── Ingest historical commits (idempotent — skips if already present) ─────
   console.log('\n📖 Ingesting historical commits…');
 
   const git = simpleGit(process.cwd());
@@ -352,7 +336,7 @@ async function main() {
   // Process oldest → newest
   const orderedCommits = [...commits].reverse();
 
-  const chapterFiles = ['chapter-01.md', 'chapter-02.md', 'chapter-03.md'];
+  const chapterFiles = ['chapter-01.md', 'chapter-02.md', 'chapter-03.md', 'chapter-X.md'];
   const documentVersionIds: string[] = [];
 
   for (const commit of orderedCommits) {

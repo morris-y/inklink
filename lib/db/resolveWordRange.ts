@@ -47,8 +47,11 @@ export function resolveWordRange(
 
   // Walk from toVersionId backwards to find fromVersionId, building the path
   const pathToTarget: string[] = [];
+  const visited = new Set<string>();
   let cur: string | null = toVersionId;
   while (cur !== null) {
+    if (visited.has(cur)) break; // cycle guard
+    visited.add(cur);
     pathToTarget.unshift(cur);
     if (cur === fromVersionId) break;
     cur = prevOf.get(cur) ?? null;

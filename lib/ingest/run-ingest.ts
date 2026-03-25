@@ -69,8 +69,50 @@ export async function runIngest(): Promise<IngestResult> {
   const workSlug = process.env.BOOK_SLUG || 'default';
   const workTitle = process.env.BOOK_TITLE || 'My Book';
 
-  // Ensure schema exists
-  // Split by semicolons to run each statement - neon() runs one statement at a time
+  // Fast path: check if already ingested BEFORE running schema DDL
+  const commitInfo = await getCurrentCommitInfo();
+  try {
+    const [work] = await sql`SELECT id FROM works WHERE slug = ${workSlug}`;
+    if (work) {
+      const existing = await sql`
+        SELECT id FROM document_versions
+        WHERE work_id = ${work.id} AND commit_sha = ${commitInfo.sha}
+      `;
+      if (existing.length > 0) {
+        return {
+          workId: work.id as string,
+          documentVersionId: existing[0].id as string,
+          chaptersIngested: 0,
+          alreadyExists: true,
+        };
+      }
+
+      // Check if this commit touches chapters/ — skip if not
+      try {
+        const git = simpleGit(process.cwd());
+        const prevSha = await getPreviousCommitSha(commitInfo.sha);
+        if (prevSha) {
+          const diff = await git.diff(['--name-only', prevSha, commitInfo.sha, '--', 'chapters/']);
+          if (!diff.trim()) {
+            console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — no changes in chapters/`);
+            const [latest] = await sql`
+              SELECT id FROM document_versions WHERE work_id = ${work.id} ORDER BY deployed_at DESC LIMIT 1
+            `;
+            return {
+              workId: work.id as string,
+              documentVersionId: latest?.id as string ?? '',
+              chaptersIngested: 0,
+              alreadyExists: true,
+            };
+          }
+        }
+      } catch { /* git not available, fall through */ }
+    }
+  } catch {
+    // Schema doesn't exist yet — fall through to DDL
+  }
+
+  // Ensure schema exists (only runs if fast path didn't return)
   const statements = CREATE_SCHEMA_SQL
     .split(';')
     .map(s => s.trim())
@@ -87,23 +129,6 @@ export async function runIngest(): Promise<IngestResult> {
     RETURNING id
   `;
   const workId = work.id as string;
-
-  // Get current commit info
-  const commitInfo = await getCurrentCommitInfo();
-
-  // Check if this commit is already ingested (idempotency)
-  const existing = await sql`
-    SELECT id FROM document_versions
-    WHERE work_id = ${workId} AND commit_sha = ${commitInfo.sha}
-  `;
-  if (existing.length > 0) {
-    return {
-      workId,
-      documentVersionId: existing[0].id as string,
-      chaptersIngested: 0,
-      alreadyExists: true,
-    };
-  }
 
   // Create document version
   const [docVersion] = await sql`
