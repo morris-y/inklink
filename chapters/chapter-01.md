@@ -10,11 +10,8 @@ It had been a warm, windy night when the prince first turned to her with a smile
 The prince sat carelessly on a window ledge, his hair bleached silver by moonlight. One bare foot beat time against the wall as he sang. 
 
 *The sun died early*
-
 *The moon cared little*
-
 *He sang secrets to the sparrows*
-
 *She overheard and stole them*
 
 “I see you, skioula,” he said suddenly, and she jumped. “You’re good at hiding but I see you. You’re Hesypera, aren’t you? Your father is Brygias Archon?”
