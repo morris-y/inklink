@@ -199,9 +199,9 @@ const MarginNoteEl = styled.div<{ $isPending?: boolean }>`
 
 const MarginFaceImg = styled.img`
   position: absolute;
-  width: 32px;
-  height: 32px;
-  left: 0.25rem;
+  width: 48px;
+  height: 48px;
+  left: -2.75rem;
   pointer-events: none;
 `;
 
@@ -991,7 +991,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
                   alt={item.type === 'like' ? '😊' : '😕'}
                   style={{
                     top: Math.max(0, (item.anchorY ?? 0) + t.offsetY),
-                    left: `calc(0.25rem + ${t.offsetX}px)`,
+                    left: `calc(-2.75rem + ${t.offsetX}px)`,
                     transform: `rotate(${t.rotation}deg)`,
                   }}
                 />
