@@ -3,15 +3,18 @@ title: "chapter I"
 order: 1
 ---
 
-Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly, but loyalty is rarely that easy.
+Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.
 
 It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her *skioula*, little shade, because he caught her peeping at him from behind a curtain. She hadn’t meant to stare, or more precisely to be caught staring. She’d heard the music faintly from some distant hall and walked towards it in a trance. 
 
 The prince sat carelessly on a window ledge, his hair bleached silver by moonlight. One bare foot beat time against the wall as he sang. 
 
 *The sun died early*
+
 *The moon cared little*
+
 *He sang secrets to the sparrows*
+
 *She overheard and stole them*
 
 “I see you, skioula,” he said suddenly, and she jumped. “You’re good at hiding but I see you. You’re Hesypera, aren’t you? Your father is Brygias Archon?”
@@ -28,11 +31,11 @@ She sung it shyly and his hands magically plucked out the accompaniment. Later h
 
 Hesypera took up crouching like a mouse near whatever room the prince was in. Even if people noticed her they forgot quickly that she was there. She learned the trick of listening while seeming like she wasn't, and in this way learned many things. 
 
-She knew the king addressed his son formally, with his name and title. The yearning in her beloved prince’s eyes as they spoke made her want to hate the king, but she could not. All children in the palace ran up to King Oeagrus fearlessly to be swung up on his knee and leave sticky with sweets. The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old. 
+She knew the king always addressed his son formally, by his name and title. The yearning in her beloved prince’s eyes as they spoke made her want to hate the king, but she could not. All children in the palace ran up to King Oeagrus fearlessly to be swung up on his knee and left sticky with sweets. The great joy the king would have taken in fatherhood was tainted before the prince was one day old. 
 
-Rumor said the queen’s first cry of pain had beckoned the goddess Eileithyia to her birthing-bed. The midwives had run out half out their minds with fear and awe. Rumor said that Calliope, the great muse herself, had appeared to announce the child and tell all how the king had been blessed: his heir was no less than the son of Apollo and would one day earn his place among the stars.
+Rumor said the queen’s first cry of pain had beckoned the goddess Eileithyia to her birthing-bed. The midwives had run from the room, half out their minds with fear and awe. Rumor said that Calliope, the great muse herself, had appeared to announce the child and tell all how the king had been blessed: his heir was no less than the son of Apollo and would one day earn his place among the stars.
 
-Oeagrus never spoke of it after, nor did anyone else in his presence. He was a man of iron, standing two heads above normal men. 
+Oeagrus never spoke of it after, nor did anyone else in his presence. Beneath his fairness and wisdom he was a man of iron, a fearsome warrior standing two heads above normal men. 
 
 It was *supposed* to be an honor, of course, having the blood of a god in your lineage. Oeagrus built a new temple to Apollo and sacrificed lavishly every year; to do otherwise would invite wrath upon his people. 
 
