@@ -209,7 +209,7 @@ const MarginFaceImg = styled.img`
   position: absolute;
   width: 48px;
   height: 48px;
-  pointer-events: none;
+  cursor: pointer;
   filter: brightness(0) saturate(100%) invert(25%) sepia(80%) saturate(600%) hue-rotate(197deg) brightness(95%) contrast(95%);
 `;
 
@@ -993,9 +993,13 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       });
       if (res.ok) {
         const data = await res.json();
-        // Replace placeholder ID with server ID; reload for accurate positions
-        setFeedbackItems(prev => prev.map(f => f.id === localId ? { ...f, id: data.id } : f));
-        loadSessionFeedback(cd.versionId);
+        // Replace placeholder with server data (accurate charStart from server)
+        setFeedbackItems(prev => prev.map(f => f.id === localId ? {
+          ...f,
+          id: data.id,
+          charStart: data.char_start ?? f.charStart,
+          charLength: data.char_length ?? f.charLength,
+        } : f));
       } else {
         setFeedbackItems(prev => prev.filter(f => f.id !== localId));
         console.error('Suggestion save failed:', res.status);
@@ -1008,6 +1012,32 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
 
   const suggEditMetaRef = useRef(suggEditMeta);
   useEffect(() => { suggEditMetaRef.current = suggEditMeta; }, [suggEditMeta]);
+
+  // Open toolbar on an existing feedback item (used by highlight clicks + margin clicks)
+  const focusOnItem = useCallback((itemId: string) => {
+    const item = feedbackItemsRef.current.find(f => f.id === itemId);
+    if (!item) return;
+    const mark = contentRef.current?.querySelector(`mark[data-feedback-id="${itemId}"]`) as HTMLElement | null;
+    const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
+    const rect = mark?.getBoundingClientRect();
+    const textRect = textColRef.current?.getBoundingClientRect();
+
+    const anchorY = rect ? rect.top - marginTop : (item.anchorY ?? 0);
+    const markCenter = rect ? (rect.left + rect.right) / 2 : 0;
+    const colCenter = textRect ? (textRect.left + textRect.right) / 2 : 0;
+    const side = item.side ?? (markCenter < colCenter ? 'left' : 'right');
+
+    setPending({
+      selectedText: '',
+      charStart: item.charStart,
+      charLength: item.charLength,
+      mode: item.type === 'dislike' ? 'dislike' : item.type === 'like' ? 'like' : 'comment',
+      commentText: item.type === 'comment' ? (item.comment ?? '') : '',
+      anchorY,
+      side,
+    });
+    setFocusedFeedbackId(itemId);
+  }, []);
 
   // Stable refs for keydown handler
   const submitPendingRef = useRef(submitPending);
@@ -1041,23 +1071,42 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         return;
       }
 
-      // Focused highlight: backspace/delete = delete, escape = unfocus
-      if (fid) {
+      // Focused highlight without pending (legacy path): backspace = delete, escape = unfocus
+      if (fid && !p) {
         if (e.key === 'Backspace' || e.key === 'Delete') {
           e.preventDefault();
-          setPending(null);
           deleteFeedbackRef.current(fid);
         } else if (e.key === 'Escape') {
-          setPending(null);
           setFocusedFeedbackId(null);
         }
         return;
+      }
+      // Focused highlight WITH pending (clicked existing item): handle delete, then fall through for arrows/typing/tab
+      if (fid && p) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          if (p.commentText.length > 0) {
+            // Deleting comment text
+            setPending(prev => prev ? { ...prev, commentText: prev.commentText.slice(0, -1) } : prev);
+          } else {
+            e.preventDefault();
+            setPending(null);
+            setFocusedFeedbackId(null);
+            deleteFeedbackRef.current(fid);
+          }
+          return;
+        }
+        // Fall through to pending handler for arrows, typing, tab, escape, enter
       }
 
       if (!p) return;
 
       if (e.key === 'Escape') {
-        setPending(null);
+        // For likes/dislikes: save on escape (highlight is already visible)
+        if (p.mode === 'like' || p.mode === 'dislike') {
+          submitPendingRef.current();
+        } else {
+          setPending(null);
+        }
         window.getSelection()?.removeAllRanges();
         return;
       }
@@ -1157,32 +1206,20 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       // Click on existing mark → show toolbar on it (before pending guard so re-clicks work)
       const mark = targetEl?.closest('mark[data-feedback-id]') as HTMLElement | null;
       if (mark && mark.dataset.feedbackId) {
-        const feedbackId = mark.dataset.feedbackId;
-        const item = feedbackItemsRef.current.find(f => f.id === feedbackId);
-        if (item) {
-          const markRect = mark.getBoundingClientRect();
-          const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
-          // Use stored side, or compute from mark position
-          const textRect = textColRef.current?.getBoundingClientRect();
-          const markCenter = (markRect.left + markRect.right) / 2;
-          const colCenter = textRect ? (textRect.left + textRect.right) / 2 : markRect.left;
-          const side = item.side ?? (markCenter < colCenter ? 'left' : 'right');
-          setPending({
-            selectedText: '',
-            charStart: item.charStart,
-            charLength: item.charLength,
-            mode: item.type === 'dislike' ? 'dislike' : item.type === 'like' ? 'like' : 'comment',
-            commentText: item.type === 'comment' ? (item.comment ?? '') : '',
-            anchorY: markRect.top - marginTop,
-            side,
-          });
-          setFocusedFeedbackId(feedbackId);
-        }
+        focusOnItem(mark.dataset.feedbackId);
         return;
       }
 
-      // Don't re-trigger if we're in a feedback interaction
-      if (pendingRef.current) return;
+      // Click away from pending → auto-save likes/dislikes, submit comments
+      if (pendingRef.current) {
+        const p = pendingRef.current;
+        if (p.mode === 'like' || p.mode === 'dislike' || (p.mode === 'comment' && p.commentText.length > 0)) {
+          submitPendingRef.current();
+        } else {
+          setPending(null);
+        }
+        return;
+      }
 
       setFocusedFeedbackId(null);
     };
@@ -1331,6 +1368,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
                   key={item.id}
                   src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
                   alt={item.type === 'like' ? '😊' : '😕'}
+                  onClick={() => focusOnItem(item.id)}
                   style={{
                     top: (leftPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0)) + t.offsetY,
                     right: `calc(-2.75rem + ${t.offsetX}px)`,
@@ -1425,6 +1463,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
                   key={item.id}
                   src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
                   alt={item.type === 'like' ? '😊' : '😕'}
+                  onClick={() => focusOnItem(item.id)}
                   style={{
                     top: (rightPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0)) + t.offsetY,
                     left: `calc(-2.75rem + ${t.offsetX}px)`,
