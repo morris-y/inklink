@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json();
+  const { password } = await req.json().catch(() => ({ password: '' }));
 
   if (!isDashboardProtected()) {
     return NextResponse.json({ ok: true });
   }
 
-  if (!checkPassword(password)) {
+  if (!password || !checkPassword(password)) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 

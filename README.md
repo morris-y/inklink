@@ -10,6 +10,11 @@ Click the button to deploy your own instance. You'll need a [Neon](https://neon.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink&env=TITLE,AUTHOR_DASH_PASSWORD&envDescription=Book%20title%20(required)%20and%20dashboard%20password%20(optional)&envLink=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink%23environment-variables&project-name=inklink&repository-name=inklink&products=[{%22type%22:%22integration%22,%22integrationSlug%22:%22neon%22,%22productSlug%22:%22neon%22,%22protocol%22:%22storage%22}])
 
+Use these settings when configuring the Neon integration:
+
+![Neon setup step 1](public/setup1.png)
+![Neon setup step 2](public/setup2.png)
+
 The Neon integration will provision a database and set `DATABASE_URL` automatically. The schema bootstraps itself on first deploy.
 
 ### Environment variables
