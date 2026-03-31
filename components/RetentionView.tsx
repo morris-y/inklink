@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
+import { AnimateNumber } from 'motion-plus/react';
 
 /* ── Types ── */
 
@@ -41,7 +42,7 @@ const StatBox = styled.div`
   flex-direction: column;
   gap: 0.2rem;
 
-  span {
+  > span {
     font-size: 0.68rem;
     font-weight: 500;
     letter-spacing: 0.1em;
@@ -53,6 +54,8 @@ const StatBox = styled.div`
     font-weight: 600;
     color: #1a1a18;
     font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: baseline;
   }
 `;
 
@@ -78,8 +81,8 @@ const SnapDot = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(26,26,24,0.55);
-  border: 2px solid #fcfcfc;
+  background: rgba(26,26,24,0.45);
+  border: none;
   transform: translate(-50%, -50%);
   pointer-events: none;
   box-shadow: 0 0 0 1px rgba(26,26,24,0.2);
@@ -254,12 +257,12 @@ export default function RetentionView({ data, signups, chapterHtml }: {
   return (
     <Wrap>
       <Stats>
-        <StatBox><span>Readers</span><strong>{data.totalReaders}</strong></StatBox>
-        <StatBox><span>Completions</span><strong>{data.completions}</strong></StatBox>
-        <StatBox><span>Completion rate</span><strong>{data.completionRate}%</strong></StatBox>
-        <StatBox><span>Avg. reading time</span><strong>{avgMin}m</strong></StatBox>
-        <StatBox><span>Next chapter</span><strong>{data.continuationRate}%</strong></StatBox>
-        <StatBox><span>Email signups</span><strong>{signups.length}</strong></StatBox>
+        <StatBox><span>Readers</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{data.totalReaders}</AnimateNumber></strong></StatBox>
+        <StatBox><span>Completions</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{data.completions}</AnimateNumber></strong></StatBox>
+        <StatBox><span>Completion rate</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{data.completionRate}</AnimateNumber>%</strong></StatBox>
+        <StatBox><span>Avg. reading time</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{avgMin}</AnimateNumber>m</strong></StatBox>
+        <StatBox><span>Next chapter</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{data.continuationRate}</AnimateNumber>%</strong></StatBox>
+        <StatBox><span>Email signups</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{signups.length}</AnimateNumber></strong></StatBox>
       </Stats>
 
       {curve.length > 0 && (

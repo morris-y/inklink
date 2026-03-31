@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import { AnimateNumber } from 'motion-plus/react';
 import ChapterText from './ChapterText';
 
 
@@ -611,8 +612,8 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
             Comments & Edits
             {!crossVersionData && (
               <CommentsCount>
-                {visibleItems.length}
-                {activeIds !== null && visibleItems.length !== items.length ? ` / ${items.length}` : ''}
+                <AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{visibleItems.length}</AnimateNumber>
+                {activeIds !== null && visibleItems.length !== items.length ? <>{' / '}<AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{items.length}</AnimateNumber></> : ''}
               </CommentsCount>
             )}
           </CommentsTitle>

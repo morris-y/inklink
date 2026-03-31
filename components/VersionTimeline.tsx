@@ -12,7 +12,7 @@ const SELECTED_DOT_SIZE = 12;
 const HOVER_SCALE = 1.7;
 const FALLBACK_TRACK_WIDTH = 640;
 
-const Container = styled.section`
+const Container = styled(motion.section)`
   display: block;
   width: 100%;
 `;
@@ -260,7 +260,11 @@ export default function VersionTimeline({ chapterId, currentCommitSha, onVersion
   );
 
   return (
-    <Container>
+    <Container
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
       <Track ref={trackRef}>
         <Rail />
 
@@ -272,8 +276,9 @@ export default function VersionTimeline({ chapterId, currentCommitSha, onVersion
             <Dot
               key={version.commitSha}
               $size={dotSizes[index]}
-              animate={{ scale: isHoveredPreview ? HOVER_SCALE : 1 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: isHoveredPreview ? HOVER_SCALE : 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 24, delay: index * 0.025 }}
               style={{
                 left: `${positions[index] - dotSizes[index] / 2}px`,
                 top: `${RAIL_Y - dotSizes[index] / 2}px`,

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
 import ChapterText from './ChapterText';
 
 /* ─── Types ───────────────────────────────────────────────────────────────── */
@@ -14,7 +15,6 @@ export interface HeatmapRange {
   readerNames: string[];
 }
 
-// Kept for reader-reach data
 export interface HeatmapLine {
   lineNumber: number;
   lineText: string;
@@ -24,7 +24,6 @@ export interface HeatmapLine {
   readerReachPercent: number;
 }
 
-// Backwards compat export (unused by new code)
 export interface HeatmapWord {
   wordIndex: number;
   word: string;
@@ -70,10 +69,11 @@ const OverlayLayer = styled.div`
 
 const OVERLAY_ALPHA = 0.18;
 
-const OverlayRectDiv = styled.div<{ $type: string }>`
+const OverlayRectMotion = styled(motion.div)<{ $type: string }>`
   position: absolute;
   border-radius: 3px;
   pointer-events: none;
+  transform-origin: left center;
   background-color: ${p =>
     p.$type === 'like'
       ? `rgba(80, 200, 80, ${OVERLAY_ALPHA})`
@@ -99,7 +99,7 @@ const Tooltip = styled.div.attrs<{ $x: number; $y: number }>(p => ({
 
 interface TextNodeEntry {
   node: Text;
-  start: number; // cumulative char offset
+  start: number;
   end: number;
 }
 
@@ -152,7 +152,6 @@ function charRangeToDomRange(
 }
 
 function getCaretCharOffset(map: TextNodeEntry[], x: number, y: number): number | null {
-  // Try standard caretRangeFromPoint first, then Firefox's caretPositionFromPoint
   let node: Node | null = null;
   let offset = 0;
 
@@ -166,7 +165,6 @@ function getCaretCharOffset(map: TextNodeEntry[], x: number, y: number): number 
 
   if (!node) return null;
 
-  // Find this text node in the map
   for (const entry of map) {
     if (entry.node === node || entry.node.parentNode === node) {
       return entry.start + Math.min(offset, (entry.node.textContent || '').length);
@@ -186,20 +184,28 @@ interface LikesHeatmapViewProps {
 export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: LikesHeatmapViewProps) {
   const textRef = useRef<HTMLDivElement>(null);
   const [overlayRects, setOverlayRects] = useState<OverlayRect[]>([]);
+  const [overlaysReady, setOverlaysReady] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; lines: string[] } | null>(null);
   const textNodeMapRef = useRef<TextNodeEntry[]>([]);
   const sortedRangesRef = useRef<HeatmapRange[]>([]);
+  const overlayGenRef = useRef(0);
 
-  // Sort ranges by charStart for efficient binary search during hover
   useEffect(() => {
     sortedRangesRef.current = [...(ranges || [])].sort((a, b) => a.charStart - b.charStart);
   }, [ranges]);
 
-  // Compute overlay rects from ranges
+  // Reset overlays on content change so they re-animate
+  useEffect(() => {
+    setOverlaysReady(false);
+    setOverlayRects([]);
+    overlayGenRef.current++;
+  }, [chapterHtml, ranges]);
+
   const computeOverlays = useCallback(() => {
     const el = textRef.current;
     if (!el || !ranges || ranges.length === 0) {
       setOverlayRects([]);
+      setOverlaysReady(true);
       return;
     }
 
@@ -210,36 +216,48 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
 
     for (let i = 0; i < ranges.length; i++) {
       const r = ranges[i];
-      const domRange = charRangeToDomRange(map, r.charStart, r.charLength);
-      if (!domRange) continue;
+      const charEnd = r.charStart + r.charLength;
 
-      const clientRects = domRange.getClientRects();
-      for (const cr of clientRects) {
-        if (cr.width === 0 || cr.height === 0) continue;
-        rects.push({
-          top: cr.top - containerRect.top + el.scrollTop,
-          left: cr.left - containerRect.left + el.scrollLeft,
-          width: cr.width,
-          height: cr.height,
-          type: r.type,
-          rangeIndex: i,
-        });
+      // Build per-text-node ranges to avoid full-block rects when a range
+      // spans an entire element (e.g. <em>...</em>)
+      for (const entry of map) {
+        const overlapStart = Math.max(r.charStart, entry.start);
+        const overlapEnd = Math.min(charEnd, entry.end);
+        if (overlapStart >= overlapEnd) continue;
+
+        const nodeRange = document.createRange();
+        try {
+          nodeRange.setStart(entry.node, overlapStart - entry.start);
+          nodeRange.setEnd(entry.node, overlapEnd - entry.start);
+        } catch { continue; }
+
+        const clientRects = nodeRange.getClientRects();
+        for (const cr of clientRects) {
+          if (cr.width === 0 || cr.height === 0) continue;
+          rects.push({
+            top: cr.top - containerRect.top + el.scrollTop,
+            left: cr.left - containerRect.left + el.scrollLeft,
+            width: cr.width,
+            height: cr.height,
+            type: r.type,
+            rangeIndex: i,
+          });
+        }
       }
     }
 
     setOverlayRects(rects);
+    setOverlaysReady(true);
   }, [ranges]);
 
-  // Recompute on mount, html change, or ranges change
+  // Compute overlays after text is painted
   useEffect(() => {
-    // Small delay to ensure the HTML is painted and fonts are loaded
     const frame = requestAnimationFrame(() => {
       document.fonts.ready.then(computeOverlays);
     });
     return () => cancelAnimationFrame(frame);
   }, [chapterHtml, computeOverlays]);
 
-  // Recalculate on resize
   useEffect(() => {
     const el = textRef.current;
     if (!el) return;
@@ -248,7 +266,7 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
     return () => observer.disconnect();
   }, [computeOverlays]);
 
-  // Hover: find ranges under cursor
+  // Hover tooltip
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const map = textNodeMapRef.current;
     if (map.length === 0 || !ranges || ranges.length === 0) return;
@@ -256,11 +274,10 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
     const charOffset = getCaretCharOffset(map, e.clientX, e.clientY);
     if (charOffset === null) { setTooltip(null); return; }
 
-    // Find all ranges containing this char offset
     const sorted = sortedRangesRef.current;
     const hits: HeatmapRange[] = [];
     for (const r of sorted) {
-      if (r.charStart > charOffset) break; // sorted, no more matches possible
+      if (r.charStart > charOffset) break;
       if (charOffset < r.charStart + r.charLength) {
         hits.push(r);
       }
@@ -268,7 +285,6 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
 
     if (hits.length === 0) { setTooltip(null); return; }
 
-    // Build tooltip lines grouped by type
     const lines: string[] = [];
     const likes = hits.filter(h => h.type === 'like');
     const dislikes = hits.filter(h => h.type === 'dislike');
@@ -292,21 +308,37 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
+  // Sort overlay rects by position for stagger (top-to-bottom, left-to-right)
+  const sortedOverlayRects = useMemo(() => {
+    return [...overlayRects].sort((a, b) => a.top - b.top || a.left - b.left);
+  }, [overlayRects]);
+
   return (
     <Container onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
       <OverlayLayer>
-        {overlayRects.map((rect, i) => (
-          <OverlayRectDiv
-            key={i}
-            $type={rect.type}
-            style={{
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            }}
-          />
-        ))}
+        <AnimatePresence>
+          {overlaysReady && sortedOverlayRects.map((rect, i) => (
+            <OverlayRectMotion
+              key={`${overlayGenRef.current}-${i}`}
+              $type={rect.type}
+              initial={{ opacity: 0, transform: 'scaleX(0)' }}
+              animate={{ opacity: 1, transform: 'scaleX(1)' }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: 0.35,
+                delay: 0.05 + i * 0.018,
+                ease: [0.22, 0.68, 0.35, 1.0],
+              }}
+              style={{
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                willChange: 'transform, opacity',
+              }}
+            />
+          ))}
+        </AnimatePresence>
       </OverlayLayer>
       <TextLayer ref={textRef}>
         <ChapterText html={chapterHtml} />

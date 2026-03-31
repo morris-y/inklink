@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
+import { AnimateNumber } from 'motion-plus/react';
 import { Chapter } from '@/types';
 import LikesHeatmapView, { HeatmapRange } from './LikesHeatmapView';
 import CommentsView from './CommentsView';
@@ -688,7 +689,8 @@ export default function AuthorDashboard() {
   };
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId);
-  const activeContentKey = `${selectedChapterId ?? 'none'}:${displayedCommitSha || currentCommitSha}:${activeView}`;
+  // Key on view tab only — chapter and version changes update props without remounting
+  const activeContentKey = activeView;
   const shouldShowLoadingState = loadingChapter && contentChapterId !== selectedChapterId;
 
   return (
@@ -765,10 +767,10 @@ export default function AuthorDashboard() {
                     <ChapterTitleText>{selectedChapter?.title}</ChapterTitleText>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                       <HeaderStats>
-                        <Stat><span>Likes</span><strong>{chapterStats.likes}</strong></Stat>
-                        <Stat><span>Dislikes</span><strong>{chapterStats.dislikes}</strong></Stat>
-                        <Stat><span>Comments</span><strong>{chapterStats.comments}</strong></Stat>
-                        <Stat><span>Edits</span><strong>{chapterStats.edits}</strong></Stat>
+                        <Stat><span>Likes</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.likes}</AnimateNumber></strong></Stat>
+                        <Stat><span>Dislikes</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.dislikes}</AnimateNumber></strong></Stat>
+                        <Stat><span>Comments</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.comments}</AnimateNumber></strong></Stat>
+                        <Stat><span>Edits</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.edits}</AnimateNumber></strong></Stat>
                       </HeaderStats>
                     </div>
                   </ContentMeta>
