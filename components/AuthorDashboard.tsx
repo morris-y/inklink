@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AnimateNumber } from 'motion-plus/react';
+import AnimateNumber from './AnimateNumber';
 import { Chapter } from '@/types';
 import LikesHeatmapView, { HeatmapRange } from './LikesHeatmapView';
 import CommentsView from './CommentsView';
 import VersionTimeline from './VersionTimeline';
 import RetentionView, { RetentionData, InterestSignup } from './RetentionView';
+import { useApi, primeCache } from '@/lib/useApi';
 
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
@@ -448,8 +449,6 @@ interface DashSuggestion {
 
 
 export default function AuthorDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [chapterVersionId, setChapterVersionId] = useState<string | null>(null);
   const [chapterHtml, setChapterHtml] = useState<string>('');
@@ -460,46 +459,78 @@ export default function AuthorDashboard() {
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
   const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
   const [, setPreComputeProgress] = useState(0);
-  const [heatmapLines, setHeatmapLines] = useState<HeatmapLine[]>([]);
-  const [heatmapRanges, setHeatmapRanges] = useState<HeatmapRange[]>([]);
-  const [totalLikes, setTotalLikes] = useState(0);
-  const [totalDislikes, setTotalDislikes] = useState(0);
-  const [dashComments, setDashComments] = useState<DashComment[]>([]);
-  const [dashSuggestions, setDashSuggestions] = useState<DashSuggestion[]>([]);
-  const [retentionData, setRetentionData] = useState<RetentionData | null>(null);
-  const [interestSignups, setInterestSignups] = useState<InterestSignup[]>([]);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [filterValue, setFilterValue] = useState('all');
-  const [readers, setReaders] = useState<{ id: string; display_name: string }[]>([]);
-  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [chapterIdsAtCommit, setChapterIdsAtCommit] = useState<string[] | null>(null);
 
-  useEffect(() => {
-    fetchChapters();
-    fetchReadersAndGroups();
-    fetchInterestSignups();
-    setLoading(false);
+  // ─── Cached API calls ──────────────────────────────────────────────────────
+  const { data: chaptersData, loading } = useApi<{ chapters: Chapter[] }>('/api/chapters');
+  const chapters = chaptersData?.chapters || [];
+
+  const { data: readersData } = useApi<{ readers: { id: string; display_name: string }[] }>('/api/dashboard/readers');
+  const readers = readersData?.readers || [];
+
+  const { data: groupsData } = useApi<{ groups: { id: string; name: string }[] }>('/api/dashboard/groups');
+  const groups = groupsData?.groups || [];
+
+  const { data: signupsData } = useApi<{ signups: InterestSignup[] }>('/api/dashboard/interest-signups');
+  const interestSignups = signupsData?.signups || [];
+
+  const buildFilterParams = useCallback((filter: string) => {
+    if (!filter || filter === 'all') return '';
+    const [type, id] = filter.split(':');
+    if (type === 'reader') return `?readerProfileId=${id}`;
+    if (type === 'group')  return `?readerGroupId=${id}`;
+    return '';
   }, []);
+
+  const heatmapUrl = chapterVersionId
+    ? `/api/dashboard/chapter-versions/${chapterVersionId}/heatmap${buildFilterParams(filterValue)}`
+    : null;
+  const feedbackUrl = chapterVersionId
+    ? `/api/dashboard/chapter-versions/${chapterVersionId}/feedback${buildFilterParams(filterValue)}`
+    : null;
+  const retentionUrl = chapterVersionId
+    ? `/api/dashboard/chapter-versions/${chapterVersionId}/retention`
+    : null;
+
+  const { data: heatmapData, mutate: mutateHeatmap } = useApi<{
+    heatmap: HeatmapLine[];
+    ranges: HeatmapRange[];
+    totalLikes: number;
+    totalDislikes: number;
+  }>(heatmapUrl);
+
+  const { data: feedbackData, mutate: mutateFeedback } = useApi<{
+    comments: DashComment[];
+    suggestions: DashSuggestion[];
+  }>(feedbackUrl);
+
+  const { data: retentionData } = useApi<RetentionData>(retentionUrl);
+
+  const heatmapLines = heatmapData?.heatmap || [];
+  const heatmapRanges = heatmapData?.ranges || [];
+  const totalLikes = heatmapData?.totalLikes ?? 0;
+  const totalDislikes = heatmapData?.totalDislikes ?? 0;
+  const dashComments = feedbackData?.comments || [];
+  const dashSuggestions = feedbackData?.suggestions || [];
+
+  // Auto-select first chapter once loaded
+  useEffect(() => {
+    if (chapters.length > 0 && !selectedChapterId) {
+      setSelectedChapterId(chapters[0].id);
+    }
+  }, [chapters, selectedChapterId]);
 
   useEffect(() => {
     if (selectedChapterId) {
       setDisplayedCommitSha('');
-      setTotalLikes(0);
-      setTotalDislikes(0);
       fetchChapterContent(selectedChapterId);
       startPreComputation(selectedChapterId);
     }
   }, [selectedChapterId]);
-
-  useEffect(() => {
-    if (chapterVersionId) {
-      fetchHeatmap(chapterVersionId, filterValue);
-      fetchChapterFeedback(chapterVersionId, filterValue);
-    }
-  }, [filterValue]);
-
 
   const startPreComputation = async (chapterId: string) => {
     try {
@@ -523,86 +554,17 @@ export default function AuthorDashboard() {
     }
   };
 
-  const buildFilterParams = (filter: string) => {
-    if (!filter || filter === 'all') return '';
-    const [type, id] = filter.split(':');
-    if (type === 'reader') return `?readerProfileId=${id}`;
-    if (type === 'group')  return `?readerGroupId=${id}`;
-    return '';
-  };
-
-  const fetchHeatmap = async (versionId: string, filter = filterValue) => {
-    try {
-      console.log('[dashboard] fetching heatmap for versionId:', versionId);
-      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/heatmap${buildFilterParams(filter)}`);
-      if (res.status === 401) { setNeedsLogin(true); return; }
-      if (res.ok) {
-        const data = await res.json();
-        console.log('[dashboard] heatmap lines:', data.heatmap?.length, 'totalReaders:', data.totalReaders, 'reactions:', data.debug?.reactionRows, 'comments:', data.debug?.commentRows);
-        setHeatmapLines(data.heatmap || []);
-        setHeatmapRanges(data.ranges || []);
-        setTotalLikes(data.totalLikes ?? 0);
-        setTotalDislikes(data.totalDislikes ?? 0);
-      } else {
-        console.error('[dashboard] heatmap fetch failed:', res.status, await res.text());
-      }
-    } catch (err) {
-      console.error('Error fetching heatmap:', err);
-    }
-  };
-
-  const fetchChapterFeedback = async (versionId: string, filter = filterValue) => {
-    try {
-      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/feedback${buildFilterParams(filter)}`);
-      if (res.status === 401) { setNeedsLogin(true); return; }
-      if (res.ok) {
-        const data = await res.json();
-        setDashComments(data.comments || []);
-        setDashSuggestions(data.suggestions || []);
-      }
-    } catch (err) {
-      console.error('Error fetching feedback:', err);
-    }
-  };
-
-  const fetchReadersAndGroups = async () => {
-    try {
-      const [rRes, gRes] = await Promise.all([
-        fetch('/api/dashboard/readers'),
-        fetch('/api/dashboard/groups'),
-      ]);
-      if (rRes.ok) { const d = await rRes.json(); setReaders(d.readers || []); }
-      if (gRes.ok) { const d = await gRes.json(); setGroups(d.groups || []); }
-    } catch { /* ignore */ }
-  };
-
-  const fetchRetention = async (versionId: string) => {
-    try {
-      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/retention`);
-      if (res.status === 401) { setNeedsLogin(true); return; }
-      if (res.ok) setRetentionData(await res.json());
-    } catch { /* ignore */ }
-  };
-
-  const fetchInterestSignups = async () => {
-    try {
-      const res = await fetch('/api/dashboard/interest-signups');
-      if (res.ok) {
-        const data = await res.json();
-        setInterestSignups(data.signups || []);
-      }
-    } catch { /* ignore */ }
-  };
-
   const handleDeleteFeedback = async (id: string, type: 'comment' | 'suggestion') => {
     try {
       const res = await fetch(`/api/dashboard/feedback/${id}?type=${type}`, { method: 'DELETE' });
       if (res.ok) {
-        if (type === 'comment') {
-          setDashComments(prev => prev.filter(c => c.id !== id));
-        } else {
-          setDashSuggestions(prev => prev.filter(s => s.id !== id));
-        }
+        mutateFeedback(prev => {
+          if (!prev) return prev;
+          return {
+            comments: type === 'comment' ? prev.comments.filter(c => c.id !== id) : prev.comments,
+            suggestions: type === 'suggestion' ? prev.suggestions.filter(s => s.id !== id) : prev.suggestions,
+          };
+        });
       }
     } catch (err) {
       console.error('Delete feedback error:', err);
@@ -620,26 +582,9 @@ export default function AuthorDashboard() {
     if (res.ok) {
       setNeedsLogin(false);
       setLoginPassword('');
-      if (chapterVersionId) {
-        fetchHeatmap(chapterVersionId, filterValue);
-        fetchChapterFeedback(chapterVersionId, filterValue);
-        fetchReadersAndGroups();
-      }
+      // After login, the useApi hooks will revalidate on their own since data is stale
     } else {
       setLoginError('Incorrect password');
-    }
-  };
-
-  const fetchChapters = async () => {
-    try {
-      const response = await fetch('/api/chapters');
-      const data = await response.json();
-      setChapters(data.chapters || []);
-      if (data.chapters && data.chapters.length > 0) {
-        setSelectedChapterId(data.chapters[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching chapters:', error);
     }
   };
 
@@ -650,18 +595,18 @@ export default function AuthorDashboard() {
         ? `/api/chapters/${chapterId}/versions/${commitSha}`
         : `/api/chapters/${chapterId}`;
       const response = await fetch(url);
+      if (response.status === 401) { setNeedsLogin(true); return; }
       const data = await response.json();
       const nextCommitSha = commitSha || data.version?.commitSha || data.commitSha || '';
+
+      // Prime the cache so useApi picks it up instantly on re-visit
+      primeCache(url, data);
 
       setChapterHtml(data.html || '');
       setContentChapterId(chapterId);
       setDisplayedCommitSha(nextCommitSha);
-      console.log('[dashboard] chapter response keys:', Object.keys(data), 'versionId:', data.versionId);
       if (data.versionId) {
         setChapterVersionId(data.versionId);
-        fetchHeatmap(data.versionId, filterValue);
-        fetchChapterFeedback(data.versionId, filterValue);
-        fetchRetention(data.versionId);
       }
 
       // Track which chapters exist at this commit (null = show all / latest)

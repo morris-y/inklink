@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { AnimateNumber } from 'motion-plus/react';
+import AnimateNumber from './AnimateNumber';
 
 /* ── Types ── */
 

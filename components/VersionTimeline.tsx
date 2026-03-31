@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useApi } from '@/lib/useApi';
 
 const CHARCOAL = '#1a1a18';
 const RAIL_Y = 20;
@@ -159,8 +160,13 @@ const resolveDotPositions = (ideals: number[], radii: number[], trackWidth: numb
 };
 
 export default function VersionTimeline({ chapterId, currentCommitSha, onVersionChange }: VersionTimelineProps) {
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [loading, setLoading] = useState(true);
+  const versionsUrl = chapterId ? `/api/chapters/${chapterId}/versions` : null;
+  const { data: versionsData, loading } = useApi<{ versions: Version[] }>(versionsUrl);
+
+  const versions = (versionsData?.versions || []).slice().sort(
+    (a: Version, b: Version) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
   const [selectedSha, setSelectedSha] = useState<string | null>(null);
   const [hoveredSha, setHoveredSha] = useState<string | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -174,7 +180,6 @@ export default function VersionTimeline({ chapterId, currentCommitSha, onVersion
 
   useEffect(() => {
     setHoveredSha(null);
-    fetchVersions();
   }, [chapterId]);
 
   useLayoutEffect(() => {
@@ -205,22 +210,6 @@ export default function VersionTimeline({ chapterId, currentCommitSha, onVersion
       observer.disconnect();
     };
   }, []);
-
-  const fetchVersions = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/chapters/${chapterId}/versions?t=${Date.now()}`);
-      const data = await response.json();
-      const sorted = (data.versions || []).slice().sort(
-        (a: Version, b: Version) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
-      setVersions(sorted);
-    } catch (error) {
-      console.error('Error fetching versions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatDate = (date: Date | string) => {
     const d = new Date(date);

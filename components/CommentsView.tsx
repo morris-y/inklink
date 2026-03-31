@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { AnimateNumber } from 'motion-plus/react';
+import AnimateNumber from './AnimateNumber';
 import ChapterText from './ChapterText';
+import { useApi } from '@/lib/useApi';
 
 
 const Container = styled.div`
@@ -436,8 +437,10 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
   const [hoveredMarkIds, setHoveredMarkIds] = useState<string[]>([]);
   const [pinnedItemIds, setPinnedItemIds] = useState<string[] | null>(null);
   const [previewSuggId, setPreviewSuggId] = useState<string | null>(null);
-  const [crossVersionData, setCrossVersionData] = useState<CrossVersionEntry[] | null>(null);
-  const [loadingCrossVersion, setLoadingCrossVersion] = useState(false);
+  const [crossVersionUrl, setCrossVersionUrl] = useState<string | null>(null);
+  const { data: crossVersionResponse, loading: loadingCrossVersion } =
+    useApi<{ versions: CrossVersionEntry[] }>(crossVersionUrl);
+  const crossVersionData = crossVersionUrl ? (crossVersionResponse?.versions ?? null) : null;
   // Track whether the current pin came from a text-selection drag
   const selectionPinRef = useRef(false);
 
@@ -508,16 +511,10 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
     selectionPinRef.current = true;
     setPinnedItemIds(overlappingIds.length > 0 ? overlappingIds : null);
 
-    // Fetch cross-version feedback for this char range
-    setCrossVersionData(null);
-    setLoadingCrossVersion(true);
-    fetch(`/api/dashboard/chapters/${chapterId}/feedback-for-range?chapterVersionId=${chapterVersionId}&charStart=${selStart}&charLength=${selLength}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setCrossVersionData(data.versions);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingCrossVersion(false));
+    // Fetch cross-version feedback for this char range (cached via useApi)
+    setCrossVersionUrl(
+      `/api/dashboard/chapters/${chapterId}/feedback-for-range?chapterVersionId=${chapterVersionId}&charStart=${selStart}&charLength=${selLength}`
+    );
   };
 
   const handleTextClick = (e: React.MouseEvent) => {
@@ -532,10 +529,10 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
       const isPinned = pinnedItemIds !== null && pinnedItemIds.length === ids.length && ids.every(id => pinnedItemIds.includes(id));
       setPinnedItemIds(isPinned ? null : ids);
       // Clicking a mark shows only current-version items (no cross-version)
-      setCrossVersionData(null);
+      setCrossVersionUrl(null);
     } else {
       setPinnedItemIds(null);
-      setCrossVersionData(null);
+      setCrossVersionUrl(null);
     }
   };
 

@@ -1,7 +1,11 @@
 # Inklink
+When I wrote the first chapter of my novel, I offhandendly tweeted if anyone would like to read it and give me feedback.
+
 On September 28, 2004, Neil Gaiman [wrote](https://journal.neilgaiman.com/2004_09_01_archive.html) in his journal: "Remember: when people tell you something's wrong or doesn't work, they are almost always right. When they tell you exactly what's wrong and how to fix it, they are almost always wrong." 
 
-That idea is the center of Inklink. Inklink lets you create your own platform for crowdsourcing reader feeedback just by cloning a Git repo. The point is to help the writer collect signal from their target audience with all the precision of consumer research. Readers are usually pretty good at telling you what a piece of writing did to them. They can tell you where they got bored, where they got confused, where something landed, and where they wanted more.
+That idea is the center of Inklink. Inklink lets you create your own platform for crowdsourcing reader feeedback just by cloning a Git repo. 
+
+The point is to help the writer collect signal from their target audience with all the precision of consumer research. Readers are usually pretty good at telling you what a piece of writing did to them. They can tell you where they got bored, where they got confused, where something landed, and where they wanted more.
 
 The job of the writer is to figure out 1) if their writing is creating the effect they want 2) how to fix it if it isn't.
 
@@ -25,7 +29,7 @@ Google Docs has a few problems.
 
 1) Everyone can see everyone else's comments, which biases feedback
 2) Sharing permissions is annoying
-3) feeback is not version-aware. You can't compare how feedback changed as your work evolved. you also can't edit your work with losing old feedback. 
+3) feedback is not version-aware. You can't compare how feedback changed as your work evolved. you also can't edit your work with losing old feedback. 
 4) no primitive reactions. You can leave comments and suggest edits, but there's easy shortcut to a reader indicating they liked or didn't like a line. This means there's no way to get a heatmap of where your piece works and where it doesn't. Inlink lets you do this. 
 5) the interface is not easy on the eyes
 
@@ -63,14 +67,17 @@ If you want to run it locally:
 git clone https://github.com/divyavenn/inklink.git
 cd inklink
 npm install
+npm run dev
 ```
 
 Then add your markdown files (one for each section) in the chapters folder. Indicate the title and relative order of each section at the top using this format.
 
+```
 ---
 title: "chapter I"
 order: 1
 ---
+```
 
 The environment variables you need are in .env.example. 
 
