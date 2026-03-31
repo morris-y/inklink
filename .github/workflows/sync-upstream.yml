@@ -34,7 +34,7 @@ jobs:
         run: |
           BRANCH="sync-upstream/$(date +%Y-%m-%d)"
           git checkout -b "$BRANCH"
-          git merge upstream/main --no-edit || true
+          git merge upstream/main --no-edit --allow-unrelated-histories || true
 
           # If merge conflicts, commit the conflict markers so the PR is visible
           if [ -n "$(git ls-files -u)" ]; then
