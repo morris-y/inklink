@@ -42,7 +42,3 @@ next-env.d.ts
 # original uncompressed video
 /public/inklink_overview_original.mp4
 
-# chapters — user content, not tracked upstream
-/chapters/*
-!/chapters/.gitkeep
-!/chapters/example.md
