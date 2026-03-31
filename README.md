@@ -8,7 +8,7 @@ Readers highlight passages and leave likes, dislikes, comments, and suggested ed
 
 Click the button to deploy your own instance. You'll need a [Neon](https://neon.tech) Postgres database (free tier works).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink&env=DATABASE_URL,BOOK_SLUG,BOOK_TITLE&envDescription=Neon%20Postgres%20connection%20string%20and%20book%20config&envLink=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink%23environment-variables&project-name=inklink&repository-name=inklink&integration-ids=oac_VqOgBHqhEoFTPzGkPd7L0iH6)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink&env=BOOK_SLUG,BOOK_TITLE&envDescription=Book%20config&envLink=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink%23environment-variables&project-name=inklink&repository-name=inklink&products=[{%22type%22:%22integration%22,%22integrationSlug%22:%22neon%22,%22productSlug%22:%22neon%22,%22protocol%22:%22storage%22}])
 
 The Neon integration will provision a database and set `DATABASE_URL` automatically. The schema bootstraps itself on first deploy.
 
