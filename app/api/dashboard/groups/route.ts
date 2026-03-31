@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { nanoid } from 'nanoid';
 import { getWorkSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const workSlug = getWorkSlug();
   const groups = await sql`
     SELECT rg.id, rg.slug, rg.name, rg.description, rg.created_at
@@ -19,8 +16,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const { name, description } = await req.json();
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 

@@ -28,6 +28,10 @@ a {
   text-decoration: none;
 }
 
+input, button, textarea, select {
+  font-family: inherit;
+}
+
 /* Hide scrollbars but keep scrolling */
 ::-webkit-scrollbar {
   display: none;

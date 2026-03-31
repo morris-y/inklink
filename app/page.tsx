@@ -193,7 +193,7 @@ export default function Home() {
         <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <motion.div variants={fadeUp}>
             <Headline>
-              Introducing <em>{bookTitle}.</em>
+              <em>{bookTitle}</em>
             </Headline>
           </motion.div>
 

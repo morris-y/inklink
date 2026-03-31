@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { wordRangeToCharPos } from '@/lib/db/wordPos';
 import { resolveWordRange } from '@/lib/db/resolveWordRange';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const { id: chapterVersionId } = await params;
   const { searchParams } = new URL(req.url);
   const readerProfileId = searchParams.get('readerProfileId');

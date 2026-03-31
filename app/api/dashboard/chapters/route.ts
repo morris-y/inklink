@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { getWorkSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const workSlug = getWorkSlug();
   const chapters = await sql`
     SELECT c.id, c.slug, c.title, c.file_path, c.sort_order, c.created_at

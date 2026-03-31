@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkPassword, createAuthCookie, isDashboardProtected } from '@/lib/auth/dashboard';
+import { checkPassword, createAuthCookie, isDashboardProtected, isDashboardAuthed } from '@/lib/auth/dashboard';
 
 const COOKIE_NAME = 'dashboard_auth';
+
+export async function GET(req: NextRequest) {
+  if (!isDashboardProtected()) return NextResponse.json({ ok: true });
+  if (await isDashboardAuthed(req)) return NextResponse.json({ ok: true });
+  return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+}
 
 export async function POST(req: NextRequest) {
   const { password } = await req.json();

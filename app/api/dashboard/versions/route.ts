@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { ensureIngested } from '@/lib/ingest/run-ingest';
 import { getWorkSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   await ensureIngested();
 
   const workSlug = getWorkSlug();

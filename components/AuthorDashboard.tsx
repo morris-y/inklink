@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import AnimateNumber from './AnimateNumber';
 import { Chapter } from '@/types';
@@ -304,68 +304,71 @@ const PreComputeIndicator = styled.div<{ $status: 'computing' | 'complete' | 'er
 
 /* ─── Login overlay ───────────────────────────────────────────────────────── */
 
+const shake = keyframes`
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(1px); }
+`;
+
 const LoginOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(20,18,16,0.7);
+  background: rgba(240,236,228,0.45);
+  backdrop-filter: blur(3px) saturate(1.1);
+  -webkit-backdrop-filter: blur(3px) saturate(1.1);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  backdrop-filter: blur(4px);
 `;
 
-const LoginCard = styled.div`
-  background: #fcfcfc;
-  border-radius: 8px;
-  padding: 2.5rem 2.5rem 2rem;
-  width: 320px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+const LoginCard = styled.form<{ $shake?: boolean }>`
+  background: rgba(245,241,235,0.85);
+  border: 1px solid rgba(26,26,24,0.08);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  width: 260px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const LoginTitle = styled.h2`
-  font-family: var(--font-playfair), Georgia, serif;
-  font-size: 1.3rem;
-  font-weight: 400;
-  font-style: italic;
-  color: #1a1a18;
-  margin: 0 0 0.25rem;
+  gap: 0.5rem;
+  align-items: stretch;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  animation: ${p => p.$shake ? css`${shake} 0.4s ease` : 'none'};
 `;
 
 const LoginInput = styled.input`
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(26,26,24,0.18);
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(26,26,24,0.12);
   border-radius: 4px;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  color: #3a3a36;
   outline: none;
   box-sizing: border-box;
-  &:focus { border-color: rgba(26,26,24,0.45); }
+  &::placeholder { color: rgba(26,26,24,0.3); }
+  &:focus { border-color: rgba(26,26,24,0.3); }
 `;
 
 const LoginButton = styled.button`
-  padding: 0.6rem 1rem;
-  background: #1a1a18;
+  padding: 0.5rem 0.85rem;
+  background: #3a3a36;
   color: #f2ede4;
   border: none;
   border-radius: 4px;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.15s ease;
-  &:hover { background: #3a3a36; }
-`;
-
-const LoginError = styled.p`
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.78rem;
-  color: #b94a36;
-  margin: 0;
+  &:hover { background: #1a1a18; }
 `;
 
 /* ─── Component ───────────────────────────────────────────────────────────── */
@@ -448,7 +451,7 @@ interface DashSuggestion {
 /* ─── Retention view ──────────────────────────────────────────────────── */
 
 
-export default function AuthorDashboard() {
+export default function AuthorDashboard({ isProtected = false }: { isProtected?: boolean }) {
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [chapterVersionId, setChapterVersionId] = useState<string | null>(null);
   const [chapterHtml, setChapterHtml] = useState<string>('');
@@ -459,9 +462,17 @@ export default function AuthorDashboard() {
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
   const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
   const [, setPreComputeProgress] = useState(0);
-  const [needsLogin, setNeedsLogin] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(isProtected);
   const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [shakeKey, setShakeKey] = useState(0);
+
+  // Check if already authed via cookie
+  useEffect(() => {
+    if (!isProtected) return;
+    fetch('/api/dashboard/login').then(res => {
+      if (res.ok) setNeedsLogin(false);
+    }).catch(() => {});
+  }, [isProtected]);
   const [filterValue, setFilterValue] = useState('all');
   const [chapterIdsAtCommit, setChapterIdsAtCommit] = useState<string[] | null>(null);
 
@@ -573,7 +584,6 @@ export default function AuthorDashboard() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError('');
     const res = await fetch('/api/dashboard/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -582,9 +592,9 @@ export default function AuthorDashboard() {
     if (res.ok) {
       setNeedsLogin(false);
       setLoginPassword('');
-      // After login, the useApi hooks will revalidate on their own since data is stale
     } else {
-      setLoginError('Incorrect password');
+      setLoginPassword('');
+      setShakeKey(k => k + 1);
     }
   };
 
@@ -595,7 +605,6 @@ export default function AuthorDashboard() {
         ? `/api/chapters/${chapterId}/versions/${commitSha}`
         : `/api/chapters/${chapterId}`;
       const response = await fetch(url);
-      if (response.status === 401) { setNeedsLogin(true); return; }
       const data = await response.json();
       const nextCommitSha = commitSha || data.version?.commitSha || data.commitSha || '';
 
@@ -639,7 +648,8 @@ export default function AuthorDashboard() {
   const shouldShowLoadingState = loadingChapter && contentChapterId !== selectedChapterId;
 
   return (
-    <Desktop>
+    <>
+    <Desktop style={needsLogin ? { pointerEvents: 'none', userSelect: 'none' } : undefined}>
       <Shell>
         {/* Tab row sits at the top of the shell */}
         <TabRow>
@@ -802,25 +812,21 @@ export default function AuthorDashboard() {
           {preComputeStatus === 'error' && 'Pre-computation failed'}
         </PreComputeIndicator>
       )}
-
-      {needsLogin && (
-        <LoginOverlay>
-          <LoginCard>
-            <LoginTitle>Dashboard Login</LoginTitle>
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <LoginInput
-                type="password"
-                placeholder="Password"
-                value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
-                autoFocus
-              />
-              {loginError && <LoginError>{loginError}</LoginError>}
-              <LoginButton type="submit">Sign in</LoginButton>
-            </form>
-          </LoginCard>
-        </LoginOverlay>
-      )}
     </Desktop>
+    {needsLogin && (
+      <LoginOverlay>
+        <LoginCard key={shakeKey} onSubmit={handleLogin} $shake={shakeKey > 0}>
+          <LoginInput
+            type="password"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={e => setLoginPassword(e.target.value)}
+            autoFocus
+          />
+          <LoginButton type="submit">Enter</LoginButton>
+        </LoginCard>
+      </LoginOverlay>
+    )}
+    </>
   );
 }

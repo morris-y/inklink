@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 
 // Legacy admin feedback route — redirects to new dashboard API.
 export async function GET(request: NextRequest) {
-  if (!await isDashboardAuthed(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const chapterVersionId = searchParams.get('chapterId');

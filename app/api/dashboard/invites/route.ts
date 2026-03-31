@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
-import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { nanoid } from 'nanoid';
 import { getWorkSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const workSlug = getWorkSlug();
   const invites = await sql`
     SELECT ri.id, ri.token, ri.label, ri.is_active, ri.expires_at, ri.created_at,
@@ -23,8 +20,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const { readerProfileId, readerGroupId, label, expiresAt } = await req.json();
 
   const workSlug = getWorkSlug();

@@ -47,5 +47,8 @@ export function createAuthCookie(): string {
 
 export function checkPassword(input: string): boolean {
   if (!PASSWORD) return true;
-  return crypto.timingSafeEqual(Buffer.from(input), Buffer.from(PASSWORD));
+  const inputBuf = Buffer.from(input);
+  const passwordBuf = Buffer.from(PASSWORD);
+  if (inputBuf.length !== passwordBuf.length) return false;
+  return crypto.timingSafeEqual(inputBuf, passwordBuf);
 }
