@@ -97,6 +97,20 @@ export async function runIngest(): Promise<IngestResult> {
   // Load and parse all chapters
   const markdownChapters = loadAllMarkdownChapters();
 
+  // No chapter files on disk → nothing to ingest
+  if (markdownChapters.length === 0) {
+    console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — no chapter files found`);
+    const [latest] = await sql`
+      SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1
+    `;
+    return {
+      workId,
+      documentVersionId: latest?.id as string ?? '',
+      chaptersIngested: 0,
+      alreadyExists: true,
+    };
+  }
+
   // Compare against latest stored versions BEFORE creating document_version —
   // skip entirely if nothing in chapters/ changed (avoids creating DB rows for
   // commits that don't touch chapter content).
