@@ -60,11 +60,13 @@ const Body = styled.p`
   line-height: 1.65;
   color: #3a3a36;
   max-width: 38ch;
+  text-align: center;
 `;
 
 const CTARow = styled.div`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1.5rem;
   flex-wrap: wrap;
 `;
@@ -134,6 +136,7 @@ const Specs = styled.div`
 const Spec = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.3rem;
 `;
 
@@ -190,7 +193,7 @@ export default function Home() {
   return (
     <Page>
       <Layout>
-        <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
           <motion.div variants={fadeUp}>
             <Headline>
               <em>{bookTitle}</em>
