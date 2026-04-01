@@ -2,7 +2,8 @@
 
 An open-source platform for crowdsourcing reader feedback on your writing. Clone the repo, deploy for free, and get a link you can send to beta readers.
 
-Readers highlight passages and leave likes, dislikes, comments, and suggested edits. The author gets a dashboard with heatmaps, retention curves, and cross-version feedback tracking — all without readers seeing each other's responses.
+Readers highlight passages and leave likes, dislikes, comments, and suggested edits. The author gets a dashboard with heatmaps, retention curves, and cross-version feedback tracking, all without readers seeing each other's responses.
+
 
 ## Features
 
