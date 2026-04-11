@@ -21,9 +21,7 @@ The prince sat carelessly on a window ledge, his hair bleached silver by moonlig
 
 She nodded wordlessly, her heart beating in her ears. He swung off the ledge and walked quietly towards her. She knew he was six — only a year older than she was — but he seemed so much bigger.
 
-“This is my lyre, my very favorite thing in the whole world. Do you want to hold it?” Without waiting for an answer he put the kithara in her hands, still warm from his palms. Her fingers stroked the silken wood. 
-
-“Can you sing? What’s your favorite song?”
+“This is my lyre." He put the kithara in her hands, still warm from his palms. Her fingers stroked the silken wood. “What’s your favorite song?”
 
 She sung it shyly and his hands magically plucked out the accompaniment. Later he told the music-master that the daughter of Brygias Archon wanted to learn how to play and that they’d take their lessons together. Her father roared with delight when he found out. 
 

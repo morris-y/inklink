@@ -34,7 +34,7 @@ function faceTransform(seed: string): { rotation: number; offsetY: number; offse
 }
 
 const Paper = styled(motion.div)`
-  padding: 4rem 2.5rem 6rem;
+  padding: 4rem 2.5rem 2rem;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -42,7 +42,7 @@ const Paper = styled(motion.div)`
 
   @media (max-width: 768px) {
     max-width: 100%;
-    padding: 2rem 0 4rem;
+    padding: 2rem 0 1.5rem;
   }
 `;
 
@@ -142,6 +142,20 @@ const ChapterContent = styled.div`
   }
   mark.highlight-suggestion .suggestion-diff {
     color: ${RED_INK};
+  }
+  mark.highlight-suggestion .suggestion-deleted {
+    color: ${RED_INK};
+    position: relative;
+    text-decoration: none;
+  }
+  mark.highlight-suggestion .suggestion-deleted::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5px;
+    background: ${RED_INK};
   }
   mark.suggestion-editing {
     background: none;
@@ -384,16 +398,16 @@ const NavButton = styled.button`
 const EmailSection = styled.div`
   max-width: 360px;
   margin: 0 auto;
-  padding: 3rem 0 1rem;
+  padding-bottom: 3rem;
   text-align: center;
   font-family: var(--font-inter), system-ui, sans-serif;
 `;
 
 const EmailTitle = styled.div`
   font-family: var(--font-playfair), Georgia, serif;
-  font-size: 1.3rem;
+  font-size: 1rem;
   color: #1a1a18;
-  margin-bottom: 0.3rem;
+  margin-bottom: 1rem;
 `;
 
 const EmailSubtitle = styled.div`
@@ -413,6 +427,7 @@ const EmailInput = styled.input`
   padding: 0.6rem 0.75rem;
   border: 1px solid rgba(26,26,24,0.18);
   border-radius: 6px;
+  background: rgba(255,255,255,0.5);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.9rem;
   color: #1a1a18;
@@ -533,7 +548,7 @@ function buildHighlightedHtml(
   for (const item of toRender) {
     // For suggestions, extract original text before charWrap modifies the DOM
     let diffInfo: ReturnType<typeof findMinimalDiff> = null;
-    if (item.suggestedText) {
+    if (item.suggestedText != null) {
       const originalText = extractTextRange(div, item.charStart, item.charLength);
       diffInfo = findMinimalDiff(originalText, item.suggestedText);
     }
@@ -547,17 +562,25 @@ function buildHighlightedHtml(
     }, item.suggestedText);
 
     // Post-process suggestion marks: only the diff portion is red
-    if (item.suggestedText && item.id !== '__pending__') {
+    if (item.suggestedText != null && item.id !== '__pending__') {
       const mark = div.querySelector(`mark[data-feedback-id="${item.id}"]`) as HTMLElement | null;
       if (mark) {
         const text = item.suggestedText;
         if (diffInfo) {
           mark.textContent = '';
           mark.appendChild(document.createTextNode(text.slice(0, diffInfo.diffStart)));
-          const span = document.createElement('span');
-          span.className = 'suggestion-diff';
-          span.textContent = diffInfo.currentSpan;
-          mark.appendChild(span);
+          // Show deleted words in red with strikethrough
+          if (diffInfo.originalSpan.length > 0 && diffInfo.currentSpan.length === 0) {
+            const del = document.createElement('span');
+            del.className = 'suggestion-deleted';
+            del.textContent = diffInfo.originalSpan;
+            mark.appendChild(del);
+          } else {
+            const span = document.createElement('span');
+            span.className = 'suggestion-diff';
+            span.textContent = diffInfo.currentSpan;
+            mark.appendChild(span);
+          }
           mark.appendChild(document.createTextNode(text.slice(diffInfo.diffStart + diffInfo.currentSpan.length)));
         }
         // If no diff (identical), leave as plain text — no red
@@ -1789,8 +1812,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
       {!emailSubmitted ? (
         <EmailSection>
-          <EmailTitle>Enjoying this?</EmailTitle>
-          <EmailSubtitle>stay in touch with the author</EmailSubtitle>
+          <EmailTitle>Enjoying this? Sign up to read more</EmailTitle>
           <EmailRow onSubmit={e => { e.preventDefault(); submitEmail(); }}>
             <EmailInput
               type="email"
