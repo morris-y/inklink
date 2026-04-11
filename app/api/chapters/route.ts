@@ -8,7 +8,12 @@ export async function GET(req: NextRequest) {
     const includeFirst = req.nextUrl.searchParams.get('includeFirst') === '1';
 
     const chapters = await sql`
-      SELECT c.id, c.slug, c.title, c.file_path as filename, c.sort_order as "order", c.created_at
+      SELECT c.id, c.slug, c.title, c.file_path as filename, c.sort_order as "order", c.created_at,
+        (SELECT MAX(dv.deployed_at)
+         FROM chapter_versions cv
+         JOIN document_versions dv ON dv.id = cv.document_version_id
+         WHERE cv.chapter_id = c.id
+        ) as last_updated
       FROM chapters c
       JOIN works w ON w.id = c.work_id
       WHERE w.slug = ${workSlug}
