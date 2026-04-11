@@ -39,11 +39,21 @@ Edit `info.json` in the repo root to set the title and blurb shown on your landi
 ```json
 {
   "title": "My Novel",
-  "blurb": "A short description readers see when they land on your site."
+  "blurb": "A short description readers see when they land on your site.",
+  "coverImage": "/cover.jpg"
 }
 ```
 
-This file is preserved when syncing upstream updates (see below), so your landing page stays yours.
+### Cover image or video
+
+The landing page has a left panel that can display a cover image or video. To set one:
+
+1. Place your image or video file in the `public/` folder (e.g. `public/cover.jpg` or `public/cover.mp4`)
+2. Set the `coverImage` field in `info.json` to the file's public path (e.g. `"/cover.jpg"`)
+
+Supported formats: JPG, PNG, WebP, GIF, MP4, WebM. If the image is smaller than the panel, it will tile to fill the space. Videos tile vertically with staggered playback. Leave `coverImage` as `""` to show the default demo video.
+
+These files are preserved when syncing upstream updates (see below), so your landing page stays yours.
 
 
 ## Adding Content

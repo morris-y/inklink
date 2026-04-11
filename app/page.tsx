@@ -492,7 +492,7 @@ export default function Home() {
         <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <RightCenter>
             <motion.div variants={fadeUp}>
-              <Subtitle>read &amp; give feedback</Subtitle>
+              <Subtitle>READ, MARKUP, SHARE</Subtitle>
             </motion.div>
 
             <motion.div variants={fadeUp}>
