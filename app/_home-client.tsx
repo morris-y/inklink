@@ -63,7 +63,7 @@ const MetaBar = styled.div`
   border-top: 2px solid #1a1a18;
   border-bottom: 1px solid rgba(26, 26, 24, 0.14);
   font-family: 'Courier New', 'Courier', monospace;
-  font-size: 0.6rem;
+  font-size: 0.78rem;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: #4a4a46;
@@ -116,7 +116,7 @@ const MastheadRule = styled.div`
 
 const MastheadOrnament = styled.span`
   font-family: var(--font-shippori-mincho), 'Noto Serif SC', serif;
-  font-size: 0.85rem;
+  font-size: 1.4rem;
   color: #6b6965;
   letter-spacing: 0.2em;
   white-space: nowrap;
@@ -126,7 +126,7 @@ const MastheadOrnament = styled.span`
 
 const ColumnsRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: 1fr 320px;
   flex: 1;
 
   @media (max-width: 640px) {
@@ -160,7 +160,7 @@ const RightCol = styled.div`
 
 const SectionLabel = styled.div`
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -188,14 +188,14 @@ const ChapterRow = styled(Link)`
 
 const ChapterNum = styled.span`
   font-family: 'Courier New', 'Courier', monospace;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: #6b6965;
   letter-spacing: 0.04em;
 `;
 
 const ChapterTitle = styled.span`
   font-family: var(--font-playfair), Georgia, serif;
-  font-size: 0.98rem;
+  font-size: 1.27rem;
   font-style: italic;
   color: #1a1a18;
   line-height: 1.3;
@@ -203,7 +203,7 @@ const ChapterTitle = styled.span`
 
 const ChapterDate = styled.span`
   font-family: 'Courier New', 'Courier', monospace;
-  font-size: 0.6rem;
+  font-size: 0.78rem;
   color: #6b6965;
   white-space: nowrap;
   letter-spacing: 0.03em;
@@ -223,12 +223,13 @@ const PrimaryButton = styled(Link)`
   background: #1a1a18;
   color: #f2ede4;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   text-align: center;
   text-decoration: none;
+  white-space: nowrap;
   border: 1.5px solid #1a1a18;
   transition: background 0.15s;
 
@@ -241,12 +242,13 @@ const SecondaryButton = styled(Link)`
   background: transparent;
   color: #1a1a18;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   text-align: center;
   text-decoration: none;
+  white-space: nowrap;
   border: 1px solid rgba(26, 26, 24, 0.22);
   transition: background 0.15s, border-color 0.15s;
 
@@ -262,7 +264,7 @@ const Footer = styled.footer`
   padding: 1.25rem 0 2rem;
   border-top: 1px solid rgba(26, 26, 24, 0.1);
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-style: italic;
   color: rgba(26, 26, 24, 0.32);
 
