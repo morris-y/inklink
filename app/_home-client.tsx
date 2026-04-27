@@ -89,12 +89,12 @@ const MastheadWrap = styled.div`
 `;
 
 const MastheadTitle = styled.h1`
-  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
-  font-size: clamp(3.5rem, 11vw, 7.5rem);
+  font-family: var(--font-shippori-mincho), serif;
+  font-size: clamp(2.4rem, 7.5vw, 5rem);
   font-weight: 700;
   line-height: 1;
   color: #1a1a18;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.05em;
   text-align: center;
   margin: 0;
 `;
@@ -112,6 +112,16 @@ const MastheadRule = styled.div`
     height: 1px;
     background: rgba(26, 26, 24, 0.18);
   }
+`;
+
+const MastheadSubtitle = styled.p`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #8a8680;
+  margin: 0;
 `;
 
 const MastheadOrnament = styled.span`
@@ -296,7 +306,7 @@ function currentEdition(): string {
 /* ── component ───────────────────────────────────────  */
 
 export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
-  const { title: bookTitle } = info;
+  const { title: bookTitle, subtitle: bookSubtitle } = info as typeof info & { subtitle?: string };
 
   return (
     <Page>
@@ -319,6 +329,7 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
           {/* Masthead */}
           <motion.div variants={fadeUp}>
             <MastheadWrap>
+              {bookSubtitle && <MastheadSubtitle>{bookSubtitle}</MastheadSubtitle>}
               <MastheadTitle>{bookTitle}</MastheadTitle>
               <MastheadRule>
                 <MastheadOrnament>草稿審閱</MastheadOrnament>
