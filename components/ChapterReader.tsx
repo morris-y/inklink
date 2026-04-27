@@ -183,10 +183,11 @@ const EditHint = styled.div`
 const MarginNoteEl = styled.div<{ $isPending?: boolean; $side?: 'left' | 'right' }>`
   position: absolute;
   width: 100%;
-  font-family: var(--font-caveat), cursive;
-  font-size: 1.4rem;
+  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-size: 0.95rem;
   color: ${BLUE_INK};
-  line-height: 1.4;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
   ${p => p.$side === 'left'
@@ -203,10 +204,10 @@ const MarginFaceImg = styled.img`
 `;
 
 const MarginNoteTextarea = styled.textarea`
-  font-family: var(--font-caveat), cursive;
-  font-size: 1.4rem;
+  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-size: 0.95rem;
   color: ${BLUE_INK};
-  line-height: 1.4;
+  line-height: 1.6;
   width: 100%;
   border: none;
   background: transparent;
@@ -214,6 +215,7 @@ const MarginNoteTextarea = styled.textarea`
   outline: none;
   padding: 0;
   padding-left: 0.5rem;
+  letter-spacing: 0.02em;
 `;
 
 const SuccessToast = styled(motion.div)`
@@ -412,6 +414,49 @@ const ToolbarBtn = styled.button<{ $active?: boolean }>`
     background: rgba(26,26,24,0.1);
     box-shadow: inset 0 1px 2px rgba(26,26,24,0.08);
   }
+`;
+
+const NotePopup = styled(motion.div)`
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: rgba(252, 250, 245, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(26,26,24,0.1);
+  border-radius: 8px;
+  padding: 0.6rem;
+  gap: 0.5rem;
+  z-index: 10000;
+  width: 300px;
+  box-shadow:
+    0 0 0 1px rgba(26,26,24,0.04),
+    0 4px 12px rgba(26,26,24,0.08),
+    0 12px 32px rgba(26,26,24,0.12);
+`;
+
+const NoteTextarea = styled.textarea`
+  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-size: 0.95rem;
+  color: ${BLUE_INK};
+  line-height: 1.65;
+  width: 100%;
+  min-height: 80px;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  padding: 0.2rem 0.3rem;
+  letter-spacing: 0.02em;
+  &::placeholder { color: rgba(43,87,151,0.3); }
+`;
+
+const NotePopupActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  border-top: 1px solid rgba(26,26,24,0.06);
+  padding-top: 0.4rem;
 `;
 
 const SearchBar = styled(motion.div)`
@@ -921,6 +966,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   const [emailInput, setEmailInput] = useState('');
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [notePopupOpen, setNotePopupOpen] = useState(false);
+  const [showExitEditConfirm, setShowExitEditConfirm] = useState(false);
+  const [exitConfirmPos, setExitConfirmPos] = useState<{ top: number; left: number } | null>(null);
   useEffect(() => {
     if (localStorage.getItem('inklink_email_submitted')) setEmailSubmitted(true);
   }, []);
@@ -942,6 +990,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       setMobileCommentMode(false);
       setMobileCommentText('');
       setSelectionRect(null);
+      setNotePopupOpen(false);
     }
   }, [pending]);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
@@ -1552,8 +1601,10 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       if (em) {
         if (e.key === 'Enter') {
           e.preventDefault();
+          setShowExitEditConfirm(false);
           exitEditModeRef.current(true);
         } else if (e.key === 'Escape') {
+          setShowExitEditConfirm(false);
           exitEditModeRef.current(false);
         }
         return;
@@ -1652,6 +1703,16 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     const handleMouseUp = (e: MouseEvent) => {
       const target = e.target as Node;
       const targetEl = target.nodeType === Node.ELEMENT_NODE ? target as HTMLElement : target.parentElement;
+
+      // In edit mode: click outside the editable mark → show exit confirmation
+      if (editModeRef.current) {
+        if (targetEl?.closest('[data-toolbar]')) return;
+        const editMark = contentRef.current?.querySelector('mark.suggestion-editing') as HTMLElement | null;
+        if (editMark && editMark.contains(target)) return;
+        setExitConfirmPos({ top: e.clientY, left: e.clientX });
+        setShowExitEditConfirm(true);
+        return;
+      }
 
       // Ignore clicks inside margin column or toolbar/pill UI
       if (targetEl?.closest('[data-margin-col]')) return;
@@ -2134,7 +2195,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
       {/* Selection toolbar: desktop only, shows near highlighted text */}
       <AnimatePresence>
-        {hasKeyboard && pending && !editMode && selectionRect && (
+        {hasKeyboard && pending && !editMode && selectionRect && !notePopupOpen && (
           <SelectionToolbar
             key="selection-toolbar"
             data-toolbar
@@ -2172,7 +2233,8 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
             </ToolbarBtn>
             <ToolbarBtn onClick={() => {
               setPending(p => p ? { ...p, mode: 'comment' } : p);
-            }}>note</ToolbarBtn>
+              setNotePopupOpen(true);
+            }}>comment</ToolbarBtn>
             {focusedFeedbackId ? (
               <ToolbarBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</ToolbarBtn>
             ) : (
@@ -2240,7 +2302,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                   if (focusedFeedbackId) deleteFeedback(focusedFeedbackId);
                   enterSuggestionModeRef.current(pending.charStart, pending.charLength, originalText);
                 }}>edit</PillBtn>
-                <PillBtn onClick={() => { setMobileCommentMode(true); setMobileCommentText(''); }}>note</PillBtn>
+                <PillBtn onClick={() => { setMobileCommentMode(true); setMobileCommentText(''); }}>comment</PillBtn>
                 {focusedFeedbackId ? (
                   <PillBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</PillBtn>
                 ) : (
@@ -2280,6 +2342,75 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               </>
             )}
           </DesktopHint>
+        )}
+      </AnimatePresence>
+
+      {/* Note input popup (desktop) */}
+      <AnimatePresence>
+        {hasKeyboard && notePopupOpen && pending?.mode === 'comment' && selectionRect && (
+          <NotePopup
+            data-toolbar
+            key="note-popup"
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.97, transition: { duration: 0.12 } }}
+            style={{
+              top: selectionRect.top - 44 > 180
+                ? selectionRect.top - 196
+                : selectionRect.bottom + 10,
+              left: Math.min(window.innerWidth - 316, Math.max(8, selectionRect.left + selectionRect.width / 2 - 150)),
+            }}
+          >
+            <NoteTextarea
+              autoFocus
+              placeholder="add a note..."
+              value={pending.commentText}
+              onChange={e => setPending(p => p ? { ...p, commentText: e.target.value } : p)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  setNotePopupOpen(false);
+                  if (pending.commentText.trim()) submitPendingRef.current();
+                  else setPending(null);
+                } else if (e.key === 'Escape') {
+                  setNotePopupOpen(false);
+                  setPending(null);
+                }
+              }}
+            />
+            <NotePopupActions>
+              <ToolbarBtn onClick={() => { setNotePopupOpen(false); setPending(null); }}>cancel</ToolbarBtn>
+              <ToolbarBtn $active onClick={() => {
+                setNotePopupOpen(false);
+                if (pending.commentText.trim()) submitPendingRef.current();
+                else setPending(null);
+              }}>save note</ToolbarBtn>
+            </NotePopupActions>
+          </NotePopup>
+        )}
+      </AnimatePresence>
+
+      {/* Exit edit mode confirmation popup */}
+      <AnimatePresence>
+        {showExitEditConfirm && exitConfirmPos && (
+          <SelectionToolbar
+            data-toolbar
+            key="exit-edit-confirm"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4, transition: { duration: 0.12 } }}
+            style={{
+              top: Math.max(8, exitConfirmPos.top - 44),
+              left: Math.min(window.innerWidth - 180, Math.max(8, exitConfirmPos.left - 80)),
+            }}
+          >
+            <ToolbarBtn $active onClick={() => { setShowExitEditConfirm(false); exitEditModeRef.current(true); }}>
+              propose
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => { setShowExitEditConfirm(false); exitEditModeRef.current(false); }}>
+              cancel
+            </ToolbarBtn>
+          </SelectionToolbar>
         )}
       </AnimatePresence>
 
