@@ -19,6 +19,7 @@ const wordDiffIn = keyframes`
 `;
 
 const StyledChapterText = styled.div`
+  font-family: 'GenRyuMin2TW', 'Noto Serif SC', serif;
   line-height: 1.6;
   font-size: 1.125rem;
   color: #2a2a2a;

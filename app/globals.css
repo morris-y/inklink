@@ -1,7 +1,28 @@
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-tc-webfont@latest/style.css');
+
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+}
+
+@font-face {
+  font-family: 'GenRyuMin2TW';
+  src: url('/fonts/GenRyuMin2TW-R.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GenRyuMin2TW';
+  src: url('/fonts/GenRyuMin2TW-M.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GenRyuMin2TW';
+  src: url('/fonts/GenRyuMin2TW-B.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
 }
 
 html,

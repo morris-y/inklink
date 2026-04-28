@@ -130,6 +130,12 @@ const ChapterContent = styled.div`
     box-shadow: 0.4em 0 0 rgba(253,224,71,0.25), -0.4em 0 0 rgba(253,224,71,0.14);
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
+  mark.highlight-none {
+    background: rgba(0,0,0,0.07);
+    padding: 0; margin: 0; border-radius: 0.3em;
+    box-shadow: 0.4em 0 0 rgba(0,0,0,0.04), -0.4em 0 0 rgba(0,0,0,0.04);
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
   mark.highlight-suggestion {
     background: none;
     color: inherit;
@@ -183,7 +189,7 @@ const EditHint = styled.div`
 const MarginNoteEl = styled.div<{ $isPending?: boolean; $side?: 'left' | 'right' }>`
   position: absolute;
   width: 100%;
-  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-family: 'LXGW WenKai TC', 'LXGW WenKai', serif;
   font-size: 0.95rem;
   color: ${BLUE_INK};
   line-height: 1.6;
@@ -191,7 +197,7 @@ const MarginNoteEl = styled.div<{ $isPending?: boolean; $side?: 'left' | 'right'
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
   ${p => p.$side === 'left'
-    ? 'left: auto; right: -1.8rem; text-align: right;'
+    ? 'left: auto; right: -1.8rem; text-align: left;'
     : 'left: -1.8rem;'}
 `;
 
@@ -204,7 +210,7 @@ const MarginFaceImg = styled.img`
 `;
 
 const MarginNoteTextarea = styled.textarea`
-  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-family: 'LXGW WenKai TC', 'LXGW WenKai', serif;
   font-size: 0.95rem;
   color: ${BLUE_INK};
   line-height: 1.6;
@@ -436,7 +442,7 @@ const NotePopup = styled(motion.div)`
 `;
 
 const NoteTextarea = styled.textarea`
-  font-family: var(--font-noto-serif-sc), 'Noto Serif SC', serif;
+  font-family: 'LXGW WenKai TC', 'LXGW WenKai', serif;
   font-size: 0.95rem;
   color: ${BLUE_INK};
   line-height: 1.65;
@@ -614,7 +620,7 @@ interface ChapterData {
   html: string;
 }
 
-type PendingMode = 'like' | 'dislike' | 'comment';
+type PendingMode = 'like' | 'dislike' | 'comment' | 'none';
 
 interface PendingState {
   selectedText: string;
@@ -1372,6 +1378,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     const p = pendingRef.current;
     const cd = chapterDataRef.current;
     if (!p || !cd) return;
+    pendingRef.current = null; // prevent double-submit from concurrent blur + mouseup
 
     // If focused on an existing item, delete the old one first (replace flow)
     const replacingId = focusedIdRef.current;
@@ -1391,7 +1398,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     }
 
     const localId = Math.random().toString(36).slice(2);
-    const type: FeedbackItem['type'] = p.mode === 'comment' ? 'comment' : p.mode;
+    const type: FeedbackItem['type'] = p.mode === 'comment' ? 'comment' : (p.mode as 'like' | 'dislike');
 
     // Optimistically add to local state
     const newItem: FeedbackItem = {
@@ -1757,7 +1764,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
           selectedText: text,
           charStart,
           charLength,
-          mode: 'like',
+          mode: 'none',
           commentText: '',
           anchorY,
           side,
@@ -2026,7 +2033,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     onBlur={() => {
                       if (editingNote) updateNoteText(item.id, editingNote.text);
                     }}
-                    rows={3}
+                    rows={5}
                   />
                 ) : (
                   item.comment
@@ -2041,9 +2048,32 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                   $side="left"
                   style={{ top: Math.max(0, pending.anchorY) }}
                 >
-                  {pending.commentText || '…'}
+                  <MarginNoteTextarea
+                    autoFocus
+                    placeholder="add a note..."
+                    value={pending.commentText}
+                    rows={5}
+                    onChange={e => {
+                      const v = e.target.value;
+                      pendingRef.current = pendingRef.current ? { ...pendingRef.current, commentText: v } : null;
+                      setPending(p => p ? { ...p, commentText: v } : p);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (pending.commentText.trim()) submitPendingRef.current();
+                        else setPending(null);
+                      } else if (e.key === 'Escape') {
+                        setPending(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (pendingRef.current?.commentText.trim()) submitPendingRef.current();
+                      else setPending(null);
+                    }}
+                  />
                 </MarginNoteEl>
-              ) : (
+              ) : pending.mode !== 'none' ? (
                 (() => {
                   const faceSeed = `${pending.charStart}_${pending.charLength}`;
                   const t = faceTransform(faceSeed);
@@ -2059,7 +2089,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     />
                   );
                 })()
-              )
+              ) : null
             )}
           </MarginColumn>
           <TextColumn ref={textColRef}>
@@ -2121,7 +2151,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     onBlur={() => {
                       if (editingNote) updateNoteText(item.id, editingNote.text);
                     }}
-                    rows={3}
+                    rows={5}
                   />
                 ) : (
                   item.comment
@@ -2136,9 +2166,32 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                   $side="right"
                   style={{ top: Math.max(0, pending.anchorY) }}
                 >
-                  {pending.commentText || '…'}
+                  <MarginNoteTextarea
+                    autoFocus
+                    placeholder="add a note..."
+                    value={pending.commentText}
+                    rows={5}
+                    onChange={e => {
+                      const v = e.target.value;
+                      pendingRef.current = pendingRef.current ? { ...pendingRef.current, commentText: v } : null;
+                      setPending(p => p ? { ...p, commentText: v } : p);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (pending.commentText.trim()) submitPendingRef.current();
+                        else setPending(null);
+                      } else if (e.key === 'Escape') {
+                        setPending(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (pendingRef.current?.commentText.trim()) submitPendingRef.current();
+                      else setPending(null);
+                    }}
+                  />
                 </MarginNoteEl>
-              ) : (
+              ) : pending.mode !== 'none' ? (
                 (() => {
                   const faceSeed = `${pending.charStart}_${pending.charLength}`;
                   const t = faceTransform(faceSeed);
@@ -2154,7 +2207,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     />
                   );
                 })()
-              )
+              ) : null
             )}
           </MarginColumn>
         </ContentRow>
@@ -2195,7 +2248,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
       {/* Selection toolbar: desktop only, shows near highlighted text */}
       <AnimatePresence>
-        {hasKeyboard && pending && !editMode && selectionRect && !notePopupOpen && (
+        {hasKeyboard && pending && !editMode && selectionRect && (pending.mode !== 'comment' || !!focusedFeedbackId) && (
           <SelectionToolbar
             key="selection-toolbar"
             data-toolbar
@@ -2233,7 +2286,6 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
             </ToolbarBtn>
             <ToolbarBtn onClick={() => {
               setPending(p => p ? { ...p, mode: 'comment' } : p);
-              setNotePopupOpen(true);
             }}>comment</ToolbarBtn>
             {focusedFeedbackId ? (
               <ToolbarBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</ToolbarBtn>
@@ -2342,51 +2394,6 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               </>
             )}
           </DesktopHint>
-        )}
-      </AnimatePresence>
-
-      {/* Note input popup (desktop) */}
-      <AnimatePresence>
-        {hasKeyboard && notePopupOpen && pending?.mode === 'comment' && selectionRect && (
-          <NotePopup
-            data-toolbar
-            key="note-popup"
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97, transition: { duration: 0.12 } }}
-            style={{
-              top: selectionRect.top - 44 > 180
-                ? selectionRect.top - 196
-                : selectionRect.bottom + 10,
-              left: Math.min(window.innerWidth - 316, Math.max(8, selectionRect.left + selectionRect.width / 2 - 150)),
-            }}
-          >
-            <NoteTextarea
-              autoFocus
-              placeholder="add a note..."
-              value={pending.commentText}
-              onChange={e => setPending(p => p ? { ...p, commentText: e.target.value } : p)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  setNotePopupOpen(false);
-                  if (pending.commentText.trim()) submitPendingRef.current();
-                  else setPending(null);
-                } else if (e.key === 'Escape') {
-                  setNotePopupOpen(false);
-                  setPending(null);
-                }
-              }}
-            />
-            <NotePopupActions>
-              <ToolbarBtn onClick={() => { setNotePopupOpen(false); setPending(null); }}>cancel</ToolbarBtn>
-              <ToolbarBtn $active onClick={() => {
-                setNotePopupOpen(false);
-                if (pending.commentText.trim()) submitPendingRef.current();
-                else setPending(null);
-              }}>save note</ToolbarBtn>
-            </NotePopupActions>
-          </NotePopup>
         )}
       </AnimatePresence>
 

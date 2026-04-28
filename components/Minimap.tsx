@@ -9,7 +9,7 @@ const MinimapContainer = styled.div`
   left: 0;
   top: 0;
   height: 100vh;
-  width: 28px;
+  width: 38px;
   z-index: 198;
   display: flex;
   flex-direction: column;
@@ -25,15 +25,15 @@ const MinimapContainer = styled.div`
 const MinimapInner = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 6px;
+  gap: 5px;
+  padding: 0 8px;
 `;
 
 const MinimapLine = styled.div<{ $active: boolean; $width: number }>`
-  height: 2px;
-  border-radius: 1px;
+  height: 3px;
+  border-radius: 2px;
   background: ${p => p.$active ? 'rgba(26,26,24,0.5)' : 'rgba(26,26,24,0.15)'};
-  width: ${p => Math.max(6, p.$width)}px;
+  width: ${p => Math.max(8, p.$width)}px;
   transition: background 0.2s ease, width 0.2s ease;
 `;
 
@@ -121,7 +121,7 @@ export default function Minimap({ contentRef, onHoverStart }: MinimapProps) {
           <MinimapLine
             key={i}
             $active={i === activeIdx}
-            $width={Math.round((p.length / maxLen) * 16)}
+            $width={Math.round((p.length / maxLen) * 22)}
             onClick={() => handleClick(i)}
           />
         ))}

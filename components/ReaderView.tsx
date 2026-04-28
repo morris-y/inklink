@@ -33,7 +33,7 @@ const ChaptersSidebar = styled(motion.aside)`
   top: 0;
   height: 100vh;
   width: 220px;
-  ${SURFACE_TEXTURE}
+  background-color: ${SURFACE_BASE};
   box-shadow:
     1px 0 0 rgba(26,26,24,0.04),
     4px 0 12px rgba(26,26,24,0.06),
@@ -42,6 +42,17 @@ const ChaptersSidebar = styled(motion.aside)`
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  will-change: transform;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/bg-texture.png');
+    background-repeat: repeat;
+    background-size: 100px 100px;
+    pointer-events: none;
+  }
 `;
 
 const SidebarHeader = styled.div`
@@ -214,7 +225,7 @@ export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
             initial={{ x: -220 }}
             animate={{ x: 0 }}
             exit={{ x: -220 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            transition={{ type: 'tween', duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
             onMouseLeave={() => setSidebarOpen(false)}
           >
             <SidebarHeader>
