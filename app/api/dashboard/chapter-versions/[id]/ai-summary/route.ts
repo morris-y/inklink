@@ -5,6 +5,9 @@ import { isDashboardAuthed } from '@/lib/auth/dashboard';
 import { clusterFeedback, type AnchoredFeedback } from '@/lib/ai/feedback-clusters';
 import { summarizeClusters, type AiSummaryResponse } from '@/lib/ai/summarize';
 
+// Gemini can take ~60 s when the primary model is overloaded and we fall back.
+export const maxDuration = 60;
+
 // ponytail: cap prompt size; the busiest passages win. Raise or paginate if authors hit it.
 const MAX_PASSAGES = 20;
 
