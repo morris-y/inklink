@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import AnimateNumber from './AnimateNumber';
 import ChapterText from './ChapterText';
 import { useApi } from '@/lib/useApi';
+import type { AiSummaryResponse, PassageSummary } from '@/lib/ai/summarize';
 
 
 const Container = styled.div`
@@ -165,6 +166,68 @@ const ReaderBadge = styled.span`
 `;
 
 
+const AI_TINT = '110,80,170';
+
+const AiButton = styled.button`
+  margin-top: 0.6rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(${AI_TINT},0.35);
+  background: rgba(${AI_TINT},0.06);
+  color: rgba(${AI_TINT},0.95);
+  cursor: pointer;
+  &:disabled { opacity: 0.6; cursor: progress; }
+  &:hover:not(:disabled) { background: rgba(${AI_TINT},0.12); }
+`;
+
+const AiCard = styled.div<{ $active?: boolean }>`
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(26,26,24,0.055);
+  border-left: 2px solid rgba(${AI_TINT},${p => p.$active ? 0.7 : 0.3});
+  background: rgba(${AI_TINT},${p => p.$active ? 0.07 : 0.03});
+  cursor: ${p => p.$active === undefined ? 'default' : 'pointer'};
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #1a1a18;
+  p { margin: 0 0 0.45rem; }
+`;
+
+const AiLabel = styled.div`
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(${AI_TINT},0.8);
+  margin-bottom: 0.45rem;
+`;
+
+const AiCounts = styled.div`
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(26,26,24,0.55);
+  margin-bottom: 0.35rem;
+`;
+
+const AiQuestion = styled.p`
+  font-style: italic;
+  color: rgba(26,26,24,0.65);
+`;
+
+const AiLink = styled.span`
+  font-size: 0.68rem;
+  color: rgba(${AI_TINT},0.85);
+`;
+
+function countsLine(p: PassageSummary): string {
+  const parts = [`${p.readerCount} reader${p.readerCount === 1 ? '' : 's'}`];
+  if (p.comments) parts.push(`${p.comments} comment${p.comments === 1 ? '' : 's'}`);
+  if (p.suggestions) parts.push(`${p.suggestions} edit${p.suggestions === 1 ? '' : 's'}`);
+  if (p.dislikes) parts.push(`${p.dislikes} dislike${p.dislikes === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
 const EmptyState = styled.div`
   text-align: center;
   padding: 3rem 1.5rem;
@@ -232,6 +295,8 @@ interface CommentsViewProps {
   chapterId: string;
   chapterVersionId: string;
   onDelete?: (id: string, type: 'comment' | 'suggestion') => void;
+  /** Reader/group filter query string (e.g. "?readerGroupId=…"), forwarded to the AI summary. */
+  filterQuery?: string;
 }
 
 interface CrossVersionEntry {
@@ -429,7 +494,7 @@ function charOverlaps(itemStart: number | null, itemLen: number | null, selStart
   return itemStart < selEnd && (itemStart + itemLen) > selStart;
 }
 
-export default function CommentsView({ chapterHtml, comments, suggestions, chapterId, chapterVersionId, onDelete }: CommentsViewProps) {
+export default function CommentsView({ chapterHtml, comments, suggestions, chapterId, chapterVersionId, onDelete, filterQuery = '' }: CommentsViewProps) {
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
   const textPanelRef = useRef<HTMLDivElement>(null);
   const [hoveredMarkIds, setHoveredMarkIds] = useState<string[]>([]);
@@ -441,6 +506,26 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
   const crossVersionData = crossVersionUrl ? (crossVersionResponse?.versions ?? null) : null;
   // Track whether the current pin came from a text-selection drag
   const selectionPinRef = useRef(false);
+
+  // AI summary: generated on demand, author-only. Highlight-only hover state so hovering a
+  // summary card emphasises its passage without filtering the panel (which would hide the card).
+  const [ai, setAi] = useState<{ loading: boolean; error: string | null; data: AiSummaryResponse | null }>({ loading: false, error: null, data: null });
+  const [aiHoverIds, setAiHoverIds] = useState<string[] | null>(null);
+  useEffect(() => {
+    setAi({ loading: false, error: null, data: null });
+  }, [chapterVersionId, filterQuery]);
+
+  const runAiSummary = async () => {
+    setAi({ loading: true, error: null, data: null });
+    try {
+      const res = await fetch(`/api/dashboard/chapter-versions/${chapterVersionId}/ai-summary${filterQuery}`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      setAi({ loading: false, error: null, data: body });
+    } catch (err) {
+      setAi({ loading: false, error: (err as Error).message, data: null });
+    }
+  };
 
   const items: Item[] = useMemo(() => {
     const all: Item[] = [
@@ -473,8 +558,8 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
   }, [hoveredPanelId]);
 
   const processedHtml = useMemo(
-    () => processHtml(chapterHtml, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId),
-    [chapterHtml, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId],
+    () => processHtml(chapterHtml, comments, suggestions, hoveredPanelId, aiHoverIds ?? hoveredMarkIds, pinnedItemIds, previewSuggId),
+    [chapterHtml, comments, suggestions, hoveredPanelId, aiHoverIds, hoveredMarkIds, pinnedItemIds, previewSuggId],
   );
 
   const handleTextMouseOver = (e: React.MouseEvent) => {
@@ -612,9 +697,49 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
               </CommentsCount>
             )}
           </CommentsTitle>
+          {items.length > 0 && !ai.data && (
+            <AiButton onClick={runAiSummary} disabled={ai.loading}>
+              {ai.loading ? 'Summarising feedback…' : 'AI summary'}
+            </AiButton>
+          )}
+          {ai.data && pinnedItemIds && (
+            <AiButton onClick={() => { setPinnedItemIds(null); setCrossVersionUrl(null); }}>← Back to AI summary</AiButton>
+          )}
         </CommentsPanelHeader>
 
         <CommentsList>
+          {ai.error && <AiCard><AiLabel>AI summary</AiLabel><p>{ai.error}</p></AiCard>}
+          {ai.data && activeIds === null && crossVersionData === null && (
+            <>
+              {ai.data.overall ? (
+                <AiCard>
+                  <AiLabel>AI summary · only you can see this</AiLabel>
+                  <p><strong>What works:</strong> {ai.data.overall.works}</p>
+                  <p><strong>Biggest issue:</strong> {ai.data.overall.biggestIssue}</p>
+                  {ai.data.overall.minor.length > 0 && (
+                    <p><strong>Smaller notes:</strong> {ai.data.overall.minor.join(' · ')}</p>
+                  )}
+                </AiCard>
+              ) : (
+                <AiCard><AiLabel>AI summary</AiLabel><p>No passage has feedback from two or more items yet, so there is nothing to summarise.</p></AiCard>
+              )}
+              {ai.data.passages.map(p => (
+                <AiCard
+                  key={`${p.charStart}-${p.charEnd}`}
+                  $active={aiHoverIds === p.itemIds}
+                  onMouseEnter={() => setAiHoverIds(p.itemIds)}
+                  onMouseLeave={() => setAiHoverIds(null)}
+                  onClick={() => { setAiHoverIds(null); setPinnedItemIds(p.itemIds); setCrossVersionUrl(null); }}
+                >
+                  <AiLabel>AI summary</AiLabel>
+                  <AiCounts>{countsLine(p)}</AiCounts>
+                  <p>{p.summary}</p>
+                  <AiQuestion>{p.question}</AiQuestion>
+                  {p.itemIds.length > 0 && <AiLink>Show the {p.itemIds.length} original item{p.itemIds.length === 1 ? '' : 's'} →</AiLink>}
+                </AiCard>
+              ))}
+            </>
+          )}
           {crossVersionData !== null ? (
             // Cross-version grouped view (text selection mode)
             loadingCrossVersion ? (
