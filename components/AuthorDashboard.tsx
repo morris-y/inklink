@@ -724,6 +724,7 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
                             chapterId={contentChapterId ?? ''}
                             chapterVersionId={chapterVersionId ?? ''}
                             onDelete={handleDeleteFeedback}
+                            filterQuery={buildFilterParams(filterValue)}
                           />
                         )}
                         {activeView === 'retention' && (
