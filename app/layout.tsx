@@ -39,6 +39,8 @@ const shipporiMincho = Shippori_Mincho({
 export const metadata: Metadata = {
   title: info.title,
   description: info.blurb,
+  // Drafts live here before they are published on morrisshyang.com; keep them out of search so the site copy is the original.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
