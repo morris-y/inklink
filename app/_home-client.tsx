@@ -351,7 +351,7 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
               ) : (
                 chapters.map(ch => (
                   <motion.div key={ch.id} variants={fadeUp}>
-                    <ChapterRow href="/read">
+                    <ChapterRow href={`/read?chapter=${ch.id}`}>
                       <ChapterNum>{padNum(ch.order)}</ChapterNum>
                       <ChapterTitle>{ch.title}</ChapterTitle>
                       <ChapterDate>{formatDate(ch.last_updated)}</ChapterDate>

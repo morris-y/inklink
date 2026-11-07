@@ -147,9 +147,10 @@ const MobileDismissBtn = styled.button`
 interface ReaderViewProps {
   sessionId: string | null;
   workId: string | null;
+  initialChapterId?: string | null; // from /read?chapter=<id> (home page chapter list)
 }
 
-export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
+export default function ReaderView({ sessionId, workId, initialChapterId }: ReaderViewProps) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [mobileWarningDismissed, setMobileWarningDismissed] = useState(false);
@@ -183,7 +184,8 @@ export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
         if (firstId) chapterCache.current[firstId] = data.firstChapter;
       }
 
-      if (chapterList.length > 0) setCurrentChapterId(chapterList[0].id);
+      const requested = chapterList.find((c) => c.id === initialChapterId);
+      if (chapterList.length > 0) setCurrentChapterId((requested ?? chapterList[0]).id);
 
       // Background-prefetch all remaining chapters
       for (const ch of chapterList.slice(1)) {
