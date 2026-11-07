@@ -1,40 +1,7 @@
 import type { Metadata } from 'next';
 import StyledComponentsRegistry from '@/lib/registry';
-import { Playfair_Display, Inter, Caveat, Noto_Serif_SC, Shippori_Mincho } from 'next/font/google';
 import info from '@/info.json';
 import './globals.css';
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const caveat = Caveat({
-  subsets: ['latin'],
-  variable: '--font-caveat',
-  display: 'swap',
-});
-
-const notoSerifSC = Noto_Serif_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-noto-serif-sc',
-  display: 'swap',
-});
-
-const shipporiMincho = Shippori_Mincho({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-shippori-mincho',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: info.title,
@@ -49,7 +16,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable} ${caveat.variable} ${notoSerifSC.variable} ${shipporiMincho.variable}`}>
+    <html lang="en">
+      <head>
+        {/* ponytail: fonts load from Google at runtime instead of next/font/google, which fetches them at build time and
+            kept failing on Vercel builders. Costs a brief system-font flash on first load; drafts-only site, noindex. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Playfair+Display:wght@400..900&family=Shippori+Mincho:wght@400;500;700&display=swap"
+        />
+      </head>
       <body>
         <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
       </body>
