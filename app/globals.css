@@ -1,3 +1,9 @@
+:root {
+  --font-inter: 'Inter';
+  --font-playfair: 'Playfair Display';
+  --font-shippori-mincho: 'Shippori Mincho';
+}
+
 @import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-tc-webfont@latest/style.css');
 
 * {
