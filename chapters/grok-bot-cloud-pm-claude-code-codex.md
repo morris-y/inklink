@@ -9,7 +9,7 @@ tags: [ai-agents, tools]
 canonical: ""
 publish: false
 source_notes: ["Engineering & Tools/Grok Bot 編排使用手冊.md", "Engineering & Tools/Grok Bot 任務交接清單.md", "AI & Prompts/Super-agent 架構：讓 agent 脫離單一 session.md", "Engineering & Tools/herdr vs cmux 評估.md"]
-order: 5
+order: 3
 ---
 
 我平常在電腦上同時開四五個 coding agent，一邊做新功能、一邊修 bug。效率很高，但很耗腦：我得自己記得哪個 agent 在做什麼、哪個在等我。離開電腦，整條線就停了。

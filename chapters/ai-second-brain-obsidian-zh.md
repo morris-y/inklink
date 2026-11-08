@@ -10,7 +10,7 @@ tags: [ai-agents, tools]
 canonical: ""
 publish: false
 source_notes: ["_CLAUDE.md", "System/数据接入与处理 SOP.md", "System/【建立知識系統】.md", "System/知识库重构进度.md"]
-order: 7
+order: 5
 ---
 
 我用 Obsidian 很多年了。寫久了一定會出現三個症狀：新筆記一直加，舊筆記從來不回頭看；連結懶得補，各主題的筆記散成孤島；寫了一堆「以後調研」的 TODO，然後就沒有然後。
