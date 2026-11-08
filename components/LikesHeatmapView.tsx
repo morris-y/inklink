@@ -92,7 +92,7 @@ const Tooltip = styled.div.attrs<{ $x: number; $y: number }>(p => ({
   line-height: 1.4;
   pointer-events: none;
   z-index: 1000;
-  max-width: 280px;
+  max-width: min(280px, calc(100vw - 16px));
 `;
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
@@ -303,7 +303,9 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
       }
     }
 
-    setTooltip({ x: e.clientX + 12, y: e.clientY + 12, lines });
+    // Clamp so the tooltip (max-width 280px) never runs past the right edge on narrow screens.
+    const x = Math.max(8, Math.min(e.clientX + 12, window.innerWidth - 288));
+    setTooltip({ x, y: e.clientY + 12, lines });
   }, [ranges]);
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);

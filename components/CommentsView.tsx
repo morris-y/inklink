@@ -7,6 +7,7 @@ import AnimateNumber from './AnimateNumber';
 import ChapterText from './ChapterText';
 import { useApi } from '@/lib/useApi';
 
+const MOBILE = '@media (max-width: 768px)';
 
 const Container = styled.div`
   display: grid;
@@ -15,12 +16,28 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   height: calc(100vh - 400px);
+  height: calc(100dvh - 400px);
   min-height: 600px;
+
+  /* Phones: one column, comments first (capped height) so feedback is visible without scrolling the whole chapter. */
+  ${MOBILE} {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    height: auto;
+    min-height: 0;
+  }
 `;
 
 const TextPanel = styled.div`
   overflow-y: auto;
   padding: 0 2rem;
+
+  ${MOBILE} {
+    overflow: visible;
+    padding: 0;
+    min-width: 0;
+  }
 `;
 
 const AnnotatedChapterText = styled(ChapterText)`
@@ -50,6 +67,13 @@ const CommentsPanel = styled.div`
   overflow: hidden;
   border-left: 1px solid rgba(26,26,24,0.07);
   background: rgba(26,26,24,0.015);
+
+  ${MOBILE} {
+    order: -1;
+    max-height: 50dvh;
+    border: 1px solid rgba(26,26,24,0.07);
+    border-radius: 6px;
+  }
 `;
 
 const CommentsPanelHeader = styled.div`
@@ -78,6 +102,7 @@ const CommentsList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  overscroll-behavior: contain;
 `;
 
 const CommentCard = styled(motion.div)<{ $isHovered: boolean; $isEdit?: boolean }>`
@@ -91,6 +116,11 @@ const CommentCard = styled(motion.div)<{ $isHovered: boolean; $isEdit?: boolean 
     ? (p.$isEdit ? 'rgba(185,120,40,0.6)' : 'rgba(80,100,200,0.45)')
     : 'transparent'};
   &:hover { background: rgba(26,26,24,0.025); }
+  overflow-wrap: anywhere;
+
+  ${MOBILE} {
+    padding: 1rem 3rem 1rem 1rem;
+  }
 `;
 
 const DeleteBtn = styled.button`
@@ -116,6 +146,21 @@ const DeleteBtn = styled.button`
   &:hover {
     color: rgba(185,40,40,0.7);
     background: rgba(185,40,40,0.08);
+  }
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid #1a1a18;
+    outline-offset: 2px;
+  }
+
+  /* Touch screens have no hover: keep the button visible and give it a 44px target. */
+  @media (hover: none) {
+    opacity: 1;
+    top: 0;
+    right: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 0;
   }
 `;
 
@@ -581,6 +626,7 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
           <DeleteBtn
             onClick={e => { e.stopPropagation(); onDelete(id, isEdit ? 'suggestion' : 'comment'); }}
             title="Delete"
+            aria-label="Delete"
           >
             ✕
           </DeleteBtn>

@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import AnimateNumber from './AnimateNumber';
 
+const MOBILE = '@media (max-width: 768px)';
+
 /* ── Types ── */
 
 export interface RetentionData {
@@ -28,6 +30,10 @@ export interface InterestSignup {
 const Wrap = styled.div`
   padding: 2rem 2.5rem;
   font-family: var(--font-inter), system-ui, sans-serif;
+
+  ${MOBILE} {
+    padding: 0;
+  }
 `;
 
 const Stats = styled.div`
@@ -35,6 +41,13 @@ const Stats = styled.div`
   gap: 2.5rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
+
+  ${MOBILE} {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const StatBox = styled.div`
@@ -74,6 +87,14 @@ const ChartWrap = styled.div`
   margin-top: 1rem;
   margin-bottom: 2rem;
   cursor: crosshair;
+  /* Vertical swipes still scroll the page; horizontal drags scrub the chart. */
+  touch-action: pan-y;
+
+  /* Y-axis labels hang off the left edge; leave room for them inside the phone screen. */
+  ${MOBILE} {
+    height: 200px;
+    margin-left: 2rem;
+  }
 `;
 
 const SnapDot = styled.div`
@@ -138,6 +159,15 @@ const TooltipHint = styled.span`
   font-size: 0.78rem;
 `;
 
+const PointerHint = styled(TooltipHint)`
+  @media (hover: none) { display: none; }
+`;
+
+const TouchHint = styled(TooltipHint)`
+  display: none;
+  @media (hover: none) { display: inline; }
+`;
+
 const SignupsSection = styled.div`
   border-top: 1px solid rgba(26,26,24,0.08);
   padding-top: 1.5rem;
@@ -151,8 +181,15 @@ const SignupsRow = styled.div`
   font-size: 0.85rem;
   color: #2a2a26;
   border-bottom: 1px solid rgba(26,26,24,0.04);
+  gap: 1rem;
+
+  span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
   span:last-child {
+    flex-shrink: 0;
     font-size: 0.75rem;
     color: rgba(26,26,24,0.35);
   }
@@ -229,7 +266,7 @@ export default function RetentionView({ data, signups, chapterHtml }: {
     lines.current = extractLinesFromHtml(chapterHtml);
   }, [chapterHtml]);
 
-  const handleChartMouse = useCallback((e: React.MouseEvent) => {
+  const handleChartPointer = useCallback((e: React.PointerEvent) => {
     if (!data || !chartRef.current) return;
     const rect = chartRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -268,7 +305,12 @@ export default function RetentionView({ data, signups, chapterHtml }: {
       {curve.length > 0 && (
         <>
           <SectionLabel>Reader drop-off</SectionLabel>
-          <ChartWrap ref={chartRef} onMouseMove={handleChartMouse} onMouseLeave={() => setHoveredIdx(null)}>
+          <ChartWrap
+            ref={chartRef}
+            onPointerMove={handleChartPointer}
+            onPointerDown={handleChartPointer}
+            onPointerLeave={e => { if (e.pointerType === 'mouse') setHoveredIdx(null); }}
+          >
             <svg viewBox={`0 ${-SVG_PAD} ${curve.length - 1} ${SVG_TOTAL}`} width="100%" height="100%" preserveAspectRatio="none" style={{ display: 'block' }}>
               {/* Horizontal grid lines */}
               {H_GRID.map(pct => (
@@ -318,7 +360,10 @@ export default function RetentionView({ data, signups, chapterHtml }: {
                 )}
               </>
             ) : (
-              <TooltipHint>Hover over the graph to see line details</TooltipHint>
+              <>
+                <PointerHint>Hover over the graph to see line details</PointerHint>
+                <TouchHint>Tap or drag across the graph to see line details</TouchHint>
+              </>
             )}
           </Tooltip>
         </>

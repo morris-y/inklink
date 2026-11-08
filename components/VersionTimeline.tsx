@@ -48,6 +48,21 @@ const Dot = styled(motion.button)<{ $size: number }>`
   cursor: pointer;
   transform-origin: center;
   z-index: 1;
+
+  &:focus-visible {
+    outline: 2px solid ${CHARCOAL};
+    outline-offset: 3px;
+  }
+
+  /* Dots are 7-12px; on touch screens an invisible ring widens the tap target without moving the dot. */
+  @media (pointer: coarse) {
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+    }
+  }
 `;
 
 const Meta = styled(motion.div)`
@@ -64,6 +79,7 @@ const MetaLine = styled(motion.div)`
   font-size: 0.68rem;
   color: rgba(26,26,24,0.52);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 `;
 
 interface Version {
