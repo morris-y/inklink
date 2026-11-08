@@ -29,7 +29,9 @@ const fadeIn = {
 /* ── layout ─────────────────────────────────────────── */
 
 const Page = styled.div`
-  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
   background-color: #f7f5f0;
   background-image: url('/bg-texture.png');
   background-repeat: repeat;
@@ -49,7 +51,7 @@ const Broadsheet = styled.div`
   flex-direction: column;
 
   @media (max-width: 640px) {
-    padding: 0 1.75rem;
+    padding: 0 max(1.25rem, env(safe-area-inset-right)) 0 max(1.25rem, env(safe-area-inset-left));
   }
 `;
 
@@ -67,6 +69,31 @@ const MetaBar = styled.div`
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: #4a4a46;
+
+  /* Phone: date + dashboard link on one row, edition line under it. */
+  @media (max-width: 640px) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'date link'
+      'vol  vol';
+    row-gap: 0.15rem;
+    column-gap: 0.75rem;
+    padding: 0.35rem 0 0.6rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+  }
+`;
+
+const MetaDate = styled.span`
+  @media (max-width: 640px) { grid-area: date; }
+`;
+
+const MetaVolume = styled.span`
+  @media (max-width: 640px) {
+    grid-area: vol;
+    color: #6b6965;
+  }
 `;
 
 const MetaLink = styled(Link)`
@@ -75,6 +102,17 @@ const MetaLink = styled(Link)`
   letter-spacing: 0.13em;
   transition: color 0.12s;
   &:hover { color: #1a1a18; }
+  &:focus-visible { outline: 2px solid #1a1a18; outline-offset: 2px; }
+
+  @media (max-width: 640px) {
+    grid-area: link;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0 0 0.75rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
 `;
 
 /* ── masthead ───────────────────────────────────────── */
@@ -91,6 +129,7 @@ const MastheadWrap = styled.div`
 const MastheadTitle = styled.h1`
   font-family: var(--font-shippori-mincho), serif;
   font-size: clamp(2.4rem, 7.5vw, 5rem);
+  overflow-wrap: anywhere;
   font-weight: 700;
   line-height: 1;
   color: #1a1a18;
@@ -191,9 +230,19 @@ const ChapterRow = styled(Link)`
   border-bottom: 1px solid rgba(26, 26, 24, 0.07);
   text-decoration: none;
   color: inherit;
+  min-height: 44px;
   transition: opacity 0.15s;
 
   &:hover { opacity: 0.55; }
+  &:focus-visible { outline: 2px solid #1a1a18; outline-offset: 2px; }
+  &:active { opacity: 0.55; }
+
+  /* Phone: date moves under the title so long titles keep their width. */
+  @media (max-width: 640px) {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    row-gap: 0.2rem;
+    padding: 0.85rem 0;
+  }
 `;
 
 const ChapterNum = styled.span`
@@ -217,6 +266,11 @@ const ChapterDate = styled.span`
   color: #6b6965;
   white-space: nowrap;
   letter-spacing: 0.03em;
+
+  @media (max-width: 640px) {
+    grid-column: 2;
+    font-size: 0.72rem;
+  }
 `;
 
 /* ── CTA ───────────────────────────────────────────── */
@@ -244,6 +298,7 @@ const PrimaryButton = styled(Link)`
   transition: background 0.15s;
 
   &:hover { background: #2e2e2a; }
+  &:focus-visible { outline: 2px solid #1a1a18; outline-offset: 2px; }
 `;
 
 const SecondaryButton = styled(Link)`
@@ -266,6 +321,7 @@ const SecondaryButton = styled(Link)`
     background: rgba(26, 26, 24, 0.04);
     border-color: rgba(26, 26, 24, 0.4);
   }
+  &:focus-visible { outline: 2px solid #1a1a18; outline-offset: 2px; }
 `;
 
 /* ── footer ────────────────────────────────────────── */
@@ -303,6 +359,14 @@ function currentEdition(): string {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+// Tells the reader that the previous history entry is this page, so its back
+// button can step back here instead of pushing a new "/" entry. Only for plain
+// clicks: a modifier click opens a new tab, which has no home entry behind it.
+function markFromHome(e: React.MouseEvent) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  try { sessionStorage.setItem('inklink:from-home', '1'); } catch { /* storage blocked */ }
+}
+
 /* ── component ───────────────────────────────────────  */
 
 export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
@@ -320,8 +384,8 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
           {/* Meta bar */}
           <motion.div variants={fadeIn}>
             <MetaBar>
-              <span>{currentEdition()}</span>
-              <span>Vol. I · Private Edition</span>
+              <MetaDate>{currentEdition()}</MetaDate>
+              <MetaVolume>Vol. I · Private Edition</MetaVolume>
               <MetaLink href="/admin">Dashboard →</MetaLink>
             </MetaBar>
           </motion.div>
@@ -351,7 +415,7 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
               ) : (
                 chapters.map(ch => (
                   <motion.div key={ch.id} variants={fadeUp}>
-                    <ChapterRow href={`/read?chapter=${ch.id}`}>
+                    <ChapterRow href={`/read?chapter=${ch.id}`} onClick={markFromHome}>
                       <ChapterNum>{padNum(ch.order)}</ChapterNum>
                       <ChapterTitle>{ch.title}</ChapterTitle>
                       <ChapterDate>{formatDate(ch.last_updated)}</ChapterDate>
@@ -369,7 +433,7 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
                 </motion.div>
                 <motion.div variants={fadeUp}>
                   <CTAStack>
-                    <PrimaryButton href="/read">Start Reading</PrimaryButton>
+                    <PrimaryButton href="/read" onClick={markFromHome}>Start Reading</PrimaryButton>
                     <SecondaryButton href="/admin">Author Dashboard</SecondaryButton>
                   </CTAStack>
                 </motion.div>
