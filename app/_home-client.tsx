@@ -348,15 +348,19 @@ function padNum(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+// Pin the zone: the server renders in UTC and readers are in Taipei, so an unpinned date near midnight
+// renders as different days on server and client (React hydration error #418).
+const TIME_ZONE = 'Asia/Taipei';
+
 function formatDate(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: TIME_ZONE });
 }
 
 function currentEdition(): string {
   const d = new Date();
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: TIME_ZONE });
 }
 
 // Tells the reader that the previous history entry is this page, so its back
@@ -384,7 +388,8 @@ export default function HomePageClient({ chapters }: { chapters: Chapter[] }) {
           {/* Meta bar */}
           <motion.div variants={fadeIn}>
             <MetaBar>
-              <MetaDate>{currentEdition()}</MetaDate>
+              {/* "Today" can still differ from the 5-minute ISR copy across midnight; that one mismatch is harmless. */}
+              <MetaDate suppressHydrationWarning>{currentEdition()}</MetaDate>
               <MetaVolume>Vol. I · Private Edition</MetaVolume>
               <MetaLink href="/admin">Dashboard →</MetaLink>
             </MetaBar>
