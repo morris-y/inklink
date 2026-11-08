@@ -10,7 +10,7 @@ tags: [ai-agents, tools, building-products]
 canonical: ""
 publish: false
 source_notes: ["Engineering & Tools/實驗看板.md", "Engineering & Tools/Skill 看板.md", "Engineering & Tools/外部內容落地紀錄.md"]
-order: 6
+order: 4
 ---
 
 2023 年我在 X 上寫過自己處理資訊的規則：重要的轉推，重要且不會過時的按讚，需要進一步處理的（工具、網站、GitHub、方法、還沒看的文章）收進書籤。

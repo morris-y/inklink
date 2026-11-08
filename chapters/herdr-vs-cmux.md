@@ -9,7 +9,7 @@ tags: [ai-agents, tools]
 canonical: ""
 publish: false
 source_notes: ["Engineering & Tools/herdr vs cmux 評估.md", "Engineering & Tools/Grok Bot 編排使用手冊.md", "AI & Prompts/Super-agent 架構：讓 agent 脫離單一 session.md"]
-order: 3
+order: 1
 ---
 
 我平常同時開四五個 coding agent：有的做新功能，有的修 bug，大一點的功能用 git worktree 開獨立環境跑，另一個螢幕拿來測試。效率很高，代價是認知成本：哪個 agent 在跑、哪個卡住在等我，全靠我自己記。DeepSeek Harness 團隊也寫過類似的觀察：一個人最多同時顧 3–5 個活躍 session，多任務的瓶頸是人的注意力，不是模型。

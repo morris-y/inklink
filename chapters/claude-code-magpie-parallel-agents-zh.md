@@ -9,7 +9,7 @@ tags: [ai-agents, tools]
 canonical: ""
 publish: false
 source_notes: ["Engineering & Tools/Magpie 多 Agent 使用手冊.md"]
-order: 4
+order: 2
 ---
 
 我平常一次開四五個 agent，同時改需求、修 bug。效率很高，但有兩個問題：主力的 Claude Code 額度有限，而且很多小任務其實用不到最強的模型。寫測試、改文案、查資料、處理個人 repo 的雜事，丟給免費模型就夠了。
