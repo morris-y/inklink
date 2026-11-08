@@ -7,7 +7,7 @@ import ReaderView from '@/components/ReaderView';
 function ReadPageInner() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('invite') ?? undefined;
-  const initialChapterId = searchParams.get('chapter');
+  const chapterParam = searchParams.get('chapter');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [workId, setWorkId] = useState<string | null>(null);
 
@@ -36,7 +36,7 @@ function ReadPageInner() {
     createOrResumeSession();
   }, []);
 
-  return <ReaderView sessionId={sessionId} workId={workId} initialChapterId={initialChapterId} />;
+  return <ReaderView sessionId={sessionId} workId={workId} chapterParam={chapterParam} />;
 }
 
 export default function ReadPage() {

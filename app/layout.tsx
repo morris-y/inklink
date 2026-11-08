@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import StyledComponentsRegistry from '@/lib/registry';
 import info from '@/info.json';
 import './globals.css';
@@ -8,6 +8,15 @@ export const metadata: Metadata = {
   description: info.blurb,
   // Drafts live here before they are published on morrisshyang.com; keep them out of search so the site copy is the original.
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: info.title, statusBarStyle: 'default' },
+};
+
+// viewport-fit=cover lets pages reach under the notch and home indicator; fixed bars pad themselves with env(safe-area-inset-*).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#f7f5f0',
 };
 
 export default function RootLayout({

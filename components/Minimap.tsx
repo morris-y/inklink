@@ -8,7 +8,7 @@ const MinimapContainer = styled.div`
   position: fixed;
   left: 0;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   width: 38px;
   z-index: 198;
   display: flex;

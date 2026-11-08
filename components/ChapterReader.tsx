@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';
+import { BottomSheet, MOBILE_QUERY, focusRing, useMediaQuery } from '@/app/read/_mobile-ui';
 
 const DotLottiePlayer = dynamic(
   () => import('@dotlottie/react-player').then(m => m.DotLottiePlayer),
@@ -61,7 +62,7 @@ const TextColumn = styled.div`
   min-width: 0;
 
   @media (max-width: 768px) {
-    padding: 0 2.5rem;
+    padding: 0 max(1.5rem, env(safe-area-inset-left)) 0 max(1.5rem, env(safe-area-inset-right));
   }
 `;
 
@@ -83,6 +84,11 @@ const ChapterTitle = styled.h2`
   color: #1a1a18;
   margin-bottom: 2.5rem;
   line-height: 1.2;
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+    margin-bottom: 1.75rem;
+  }
 `;
 
 const ChapterContent = styled.div`
@@ -239,6 +245,15 @@ const SuccessToast = styled(motion.div)`
   z-index: 10000;
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.875rem;
+
+  @media (max-width: 768px) {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    translate: -50% 0;
+    white-space: nowrap;
+  }
 `;
 
 const HelpButton = styled.button`
@@ -265,6 +280,11 @@ const HelpButton = styled.button`
   transition-timing-function: ease;
   &:hover { color: #1a1a18; border-color: rgba(26,26,24,0.3); }
   &:active { scale: 0.96; }
+  ${focusRing}
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const HelpOverlay = styled(motion.div)`
@@ -311,48 +331,156 @@ const ShortcutKey = styled.span`
   font-family: var(--font-inter), system-ui, sans-serif;
 `;
 
-const MobilePill = styled(motion.div)`
-  display: flex;
+// Touch devices: actions for the current selection sit in a bar at the bottom,
+// above the home indicator, so they never collide with the native copy menu
+// that iOS/Android draw above the selection.
+const MobileActionBar = styled(motion.div)`
   position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  background: #1a1a18;
-  border-radius: 24px;
-  padding: 0.35rem;
+  left: max(0.75rem, env(safe-area-inset-left));
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  display: flex;
   gap: 2px;
+  padding: 0.3rem;
+  background: #1a1a18;
+  border-radius: 14px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   z-index: 10000;
-  align-items: center;
 `;
 
-const PillBtn = styled.button<{ $active?: boolean }>`
-  background: ${p => p.$active ? 'rgba(255,255,255,0.15)' : 'transparent'};
+const ActionBtn = styled.button<{ $active?: boolean }>`
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 0.25rem;
   border: none;
+  border-radius: 10px;
+  background: ${p => p.$active ? 'rgba(255,255,255,0.15)' : 'transparent'};
   color: #e8e4dc;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.72rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 20px;
-  cursor: pointer;
+  font-size: 0.85rem;
   white-space: nowrap;
+  cursor: pointer;
   transition-property: background, scale;
   transition-duration: 0.12s;
-  transition-timing-function: ease;
-  &:hover { background: rgba(255,255,255,0.12); }
-  &:active { scale: 0.96; }
+  transition-timing-function: ease-out;
+  &:active { background: rgba(255,255,255,0.12); scale: 0.97; }
+  &:focus-visible { outline: 2px solid #e8e4dc; outline-offset: -2px; }
 `;
 
-const PillInput = styled.input`
-  background: rgba(255,255,255,0.1);
+const ActionCloseBtn = styled(ActionBtn)`
+  flex: 0 0 48px;
+`;
+
+const TouchHint = styled(motion.div)`
+  position: fixed;
+  left: max(0.75rem, env(safe-area-inset-left));
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  background: #1a1a18;
+  color: #e8e4dc;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  z-index: 9999;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+`;
+
+const TouchHintText = styled.span`
+  flex: 1;
+`;
+
+const TouchHintBtn = styled.button`
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 0.85rem;
   border: none;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
   color: #e8e4dc;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 1rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  &:active { background: rgba(255,255,255,0.2); }
+  &:focus-visible { outline: 2px solid #e8e4dc; outline-offset: 2px; }
+`;
+
+const SheetForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 1.25rem 1rem;
+`;
+
+const SheetLabel = styled.label`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(26,26,24,0.45);
+`;
+
+const SheetQuote = styled.blockquote`
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(26,26,24,0.2);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #6a6a60;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+// 16px minimum: smaller text makes iOS zoom the page when the field gets focus.
+const SheetTextarea = styled.textarea<{ $tone: 'note' | 'edit' }>`
+  width: 100%;
+  min-height: 112px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(26,26,24,0.18);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.5);
+  font-family: ${p => p.$tone === 'note' ? "'LXGW WenKai TC', 'LXGW WenKai', serif" : 'var(--font-inter), system-ui, sans-serif'};
+  font-size: 16px;
+  line-height: 1.6;
+  color: ${p => p.$tone === 'note' ? BLUE_INK : RED_INK};
+  resize: none;
   outline: none;
-  width: 140px;
-  &::placeholder { color: rgba(232,228,220,0.35); }
+  transition-property: border-color;
+  transition-duration: 0.15s;
+  &:focus-visible { border-color: rgba(26,26,24,0.45); }
+  &::placeholder { color: rgba(26,26,24,0.3); }
+`;
+
+const SheetActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const SheetBtn = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid ${p => p.$primary ? '#1a1a18' : 'rgba(26,26,24,0.18)'};
+  background: ${p => p.$primary ? '#1a1a18' : 'transparent'};
+  color: ${p => p.$primary ? '#f2ede4' : '#1a1a18'};
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition-property: scale, opacity;
+  transition-duration: 0.12s;
+  transition-timing-function: ease-out;
+  &:active { scale: 0.98; }
+  &:disabled { opacity: 0.4; cursor: default; }
+  ${focusRing}
 `;
 
 const DesktopHint = styled(motion.div)`
@@ -519,7 +647,10 @@ const ChapterNav = styled.div`
   align-items: center;
 
   @media (max-width: 768px) {
-    padding: 1.5rem 2.5rem 3rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding: 1rem max(1.5rem, env(safe-area-inset-right)) calc(2rem + env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
   }
 `;
 
@@ -539,6 +670,29 @@ const NavButton = styled.button`
   transition-timing-function: ease;
   &:hover { color: #1a1a18; }
   &:active { scale: 0.96; }
+  ${focusRing}
+
+  @media (max-width: 768px) {
+    min-height: 56px;
+    justify-content: center;
+    padding: 0 0.75rem;
+    border: 1px solid rgba(26,26,24,0.18);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #1a1a18;
+    &:active { scale: 0.98; background: rgba(26,26,24,0.04); }
+  }
+`;
+
+const NextNavButton = styled(NavButton)`
+  @media (max-width: 768px) {
+    grid-column: 2;
+    background: #1a1a18;
+    border-color: #1a1a18;
+    color: #f2ede4;
+    &:hover { color: #f2ede4; }
+    &:active { background: #333330; }
+  }
 `;
 
 const EmailSection = styled.div`
@@ -547,6 +701,10 @@ const EmailSection = styled.div`
   padding-bottom: 3rem;
   text-align: center;
   font-family: var(--font-inter), system-ui, sans-serif;
+
+  @media (max-width: 768px) {
+    padding: 0 1.5rem 2rem;
+  }
 `;
 
 const EmailTitle = styled.div`
@@ -582,6 +740,11 @@ const EmailInput = styled.input`
   transition-duration: 0.15s;
   &:focus { border-color: rgba(26,26,24,0.45); }
   &::placeholder { color: rgba(26,26,24,0.3); }
+
+  @media (max-width: 768px) {
+    font-size: 16px; /* below 16px iOS zooms in on focus */
+    min-height: 44px;
+  }
 `;
 
 const EmailSubmitBtn = styled.button`
@@ -600,6 +763,11 @@ const EmailSubmitBtn = styled.button`
   &:hover { background: #333330; }
   &:active { scale: 0.96; }
   &:disabled { opacity: 0.5; cursor: default; }
+  ${focusRing}
+
+  @media (max-width: 768px) {
+    min-height: 44px;
+  }
 `;
 
 interface ChapterReaderProps {
@@ -944,6 +1112,17 @@ function assignSide(
   return preferred;
 }
 
+const HELP_SEEN_KEY = 'inklink-help-seen';
+const TOUCH_HINT_SEEN_KEY = 'inklink-touch-hint-seen';
+
+// localStorage can throw (private mode, blocked storage); treat that as "not stored".
+function readFlag(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function writeFlag(key: string) {
+  try { localStorage.setItem(key, '1'); } catch { /* storage blocked */ }
+}
+
 export default function ChapterReader({ chapterId, sessionId, workId, prefetchedData, prevChapterId, nextChapterId, onNavigate, contentElRef }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -955,15 +1134,24 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   const [editingNote, setEditingNote] = useState<EditingNote | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [hasKeyboard, setHasKeyboard] = useState(true);
+  // Touch-first devices start without a keyboard; read synchronously so the
+  // keyboard help never flashes on phones.
+  const [hasKeyboard, setHasKeyboard] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  });
   const [showHelp, setShowHelp] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('inklink-help-seen');
+    return readFlag(HELP_SEEN_KEY) === null;
   });
+  const [showTouchHint, setShowTouchHint] = useState(false);
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  const reduceMotion = useReducedMotion();
   const helpBtnRef = useRef<HTMLButtonElement>(null);
   const [selectionRect, setSelectionRect] = useState<{ top: number; left: number; width: number; bottom: number } | null>(null);
   const [mobileCommentMode, setMobileCommentMode] = useState(false);
   const [mobileCommentText, setMobileCommentText] = useState('');
+  const [mobileEdit, setMobileEdit] = useState<{ originalText: string; charStart: number; replacingId: string | null; text: string } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMatches, setSearchMatches] = useState<number[]>([]);
@@ -995,6 +1183,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     if (!pending) {
       setMobileCommentMode(false);
       setMobileCommentText('');
+      setMobileEdit(null);
       setSelectionRect(null);
       setNotePopupOpen(false);
     }
@@ -1238,7 +1427,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   // Close help modal on Escape
   useEffect(() => {
     if (!showHelp) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setShowHelp(false); localStorage.setItem('inklink-help-seen', '1'); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setShowHelp(false); writeFlag(HELP_SEEN_KEY); } };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [showHelp]);
@@ -1705,6 +1894,86 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     return () => document.removeEventListener('keydown', onKey);
   }, []); // once — uses refs
 
+  // Turn the current text selection inside the chapter into a pending annotation.
+  // Returns true when the selection was handled. Shared by mouseup (desktop) and
+  // the debounced selectionchange listener (touch, where long-press fires no mouseup).
+  const createPendingFromSelection = useCallback((): boolean => {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim() && contentRef.current) {
+      // Make sure selection is within contentRef
+      const range = selection.getRangeAt(0);
+      if (!contentRef.current.contains(range.commonAncestorContainer)) return false;
+
+      const text = selection.toString().trim();
+      const rect = range.getBoundingClientRect();
+
+      const charStart = getCharOffset(contentRef.current, range.startContainer, range.startOffset);
+      const charEnd = getCharOffset(contentRef.current, range.endContainer, range.endOffset);
+      const charLength = Math.max(0, charEnd - charStart);
+
+      // Prevent overlapping feedback — focus existing item instead
+      const overlapping = feedbackItemsRef.current.find(item =>
+        item.charStart < charStart + charLength && charStart < item.charStart + item.charLength
+      );
+      if (overlapping) {
+        window.getSelection()?.removeAllRanges();
+        focusOnItem(overlapping.id);
+        return true;
+      }
+
+      const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
+      const anchorY = rect.top - marginTop;
+
+      // Compute side based on selection position
+      const textRect = textColRef.current?.getBoundingClientRect();
+      const items = feedbackItemsRef.current;
+      const lItems = items.filter(f => f.side === 'left' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+      const rItems = items.filter(f => f.side === 'right' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+      const side = textRect ? assignSide(rect, textRect, lItems, rItems, anchorY) : 'right';
+
+      setPending({
+        selectedText: text,
+        charStart,
+        charLength,
+        mode: 'none',
+        commentText: '',
+        anchorY,
+        side,
+      });
+      setSelectionRect({ top: rect.top, left: rect.left, width: rect.width, bottom: rect.bottom });
+
+      setFocusedFeedbackId(null);
+
+      // On mobile, clear native selection to dismiss native toolbar
+      if ('ontouchstart' in window) {
+        setTimeout(() => window.getSelection()?.removeAllRanges(), 50);
+      }
+      return true;
+    }
+    return false;
+  }, [focusOnItem]);
+
+  // Touch: long-press selection does not fire mouseup, so follow selectionchange.
+  // Debounced so dragging the selection handles does not open the bar mid-drag.
+  useEffect(() => {
+    if (hasKeyboard) return;
+    let timer = 0;
+    const onSelectionChange = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (editModeRef.current) return;
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
+        createPendingFromSelection();
+      }, 450);
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('selectionchange', onSelectionChange);
+    };
+  }, [hasKeyboard, createPendingFromSelection]);
+
   // Mouse up handler
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
@@ -1728,57 +1997,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       const selection = window.getSelection();
 
       // Has a text selection → create pending
-      if (selection && !selection.isCollapsed && selection.toString().trim() && contentRef.current) {
-        // Make sure selection is within contentRef
-        const range = selection.getRangeAt(0);
-        if (!contentRef.current.contains(range.commonAncestorContainer)) return;
-
-        const text = selection.toString().trim();
-        const rect = range.getBoundingClientRect();
-
-        const charStart = getCharOffset(contentRef.current, range.startContainer, range.startOffset);
-        const charEnd = getCharOffset(contentRef.current, range.endContainer, range.endOffset);
-        const charLength = Math.max(0, charEnd - charStart);
-
-        // Prevent overlapping feedback — focus existing item instead
-        const overlapping = feedbackItemsRef.current.find(item =>
-          item.charStart < charStart + charLength && charStart < item.charStart + item.charLength
-        );
-        if (overlapping) {
-          window.getSelection()?.removeAllRanges();
-          focusOnItem(overlapping.id);
-          return;
-        }
-
-        const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
-        const anchorY = rect.top - marginTop;
-
-        // Compute side based on selection position
-        const textRect = textColRef.current?.getBoundingClientRect();
-        const items = feedbackItemsRef.current;
-        const lItems = items.filter(f => f.side === 'left' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
-        const rItems = items.filter(f => f.side === 'right' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
-        const side = textRect ? assignSide(rect, textRect, lItems, rItems, anchorY) : 'right';
-
-        setPending({
-          selectedText: text,
-          charStart,
-          charLength,
-          mode: 'none',
-          commentText: '',
-          anchorY,
-          side,
-        });
-        setSelectionRect({ top: rect.top, left: rect.left, width: rect.width, bottom: rect.bottom });
-
-        setFocusedFeedbackId(null);
-
-        // On mobile, clear native selection to dismiss native toolbar
-        if ('ontouchstart' in window) {
-          setTimeout(() => window.getSelection()?.removeAllRanges(), 50);
-        }
-        return;
-      }
+      if (createPendingFromSelection()) return;
 
       // Click with no selection
       if (!selection?.isCollapsed) return;
@@ -1814,16 +2033,27 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Auto-advance to next chapter
+  // Touch: one short hint in place of the keyboard help, shown once ever.
   useEffect(() => {
-    if (!nextChapterId || !scrollSentinelRef.current) return;
+    if (hasKeyboard || loading || readFlag(TOUCH_HINT_SEEN_KEY) !== null) return;
+    writeFlag(TOUCH_HINT_SEEN_KEY);
+    setShowTouchHint(true);
+    const t = window.setTimeout(() => setShowTouchHint(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [hasKeyboard, loading]);
+  useEffect(() => { if (pending) setShowTouchHint(false); }, [pending]);
+
+  // Auto-advance to next chapter (desktop only: on phones the prev/next buttons
+  // sit right above the sentinel, so reaching them would jump chapters by itself)
+  useEffect(() => {
+    if (isMobile || !nextChapterId || !scrollSentinelRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) onNavigate(nextChapterId); },
       { threshold: 1.0 }
     );
     observer.observe(scrollSentinelRef.current);
     return () => observer.disconnect();
-  }, [nextChapterId, onNavigate]);
+  }, [isMobile, nextChapterId, onNavigate]);
 
   // Compute margin note positions with collision avoidance (side-based)
   // Default side to 'right' for items that haven't been assigned yet (before useLayoutEffect runs)
@@ -1856,6 +2086,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       return { ...item, anchorY };
     }));
   }, [feedbackItems.map(f => `${f.id}:${f.anchorY !== undefined ? 1 : 0}`).join(','), editMode]);
+
+  const closeMobileComment = useCallback(() => { setMobileCommentMode(false); setMobileCommentText(''); }, []);
+  const closeMobileEdit = useCallback(() => setMobileEdit(null), []);
 
   const updateNoteText = async (itemId: string, newText: string) => {
     setFeedbackItems(prev => prev.map(f => f.id === itemId ? { ...f, comment: newText } : f));
@@ -1891,7 +2124,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
   return (
     <>
-      <HelpButton ref={helpBtnRef} onClick={() => setShowHelp(true)}>?</HelpButton>
+      {hasKeyboard && (
+        <HelpButton ref={helpBtnRef} type="button" aria-label="How to annotate" onClick={() => setShowHelp(true)}>?</HelpButton>
+      )}
 
       {/* Search bar */}
       <AnimatePresence>
@@ -1937,12 +2172,12 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       </AnimatePresence>
 
       <AnimatePresence>
-        {showHelp && (
+        {showHelp && hasKeyboard && (
           <HelpOverlay
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.2, delay: 0.05 } }}
-            onClick={() => { setShowHelp(false); localStorage.setItem('inklink-help-seen', '1'); }}
+            onClick={() => { setShowHelp(false); writeFlag(HELP_SEEN_KEY); }}
           >
             <HelpContent
               initial={{ opacity: 0, scale: 0.2, borderRadius: '50%' }}
@@ -2236,10 +2471,10 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
       <ChapterNav>
         {prevChapterId
-          ? <NavButton onClick={() => onNavigate(prevChapterId)}>← Previous chapter</NavButton>
+          ? <NavButton type="button" onClick={() => onNavigate(prevChapterId)}>← Previous chapter</NavButton>
           : <span />}
         {nextChapterId
-          ? <NavButton onClick={() => onNavigate(nextChapterId)}>Next chapter →</NavButton>
+          ? <NextNavButton type="button" onClick={() => onNavigate(nextChapterId)}>Next chapter →</NextNavButton>
           : <span />}
       </ChapterNav>
 
@@ -2296,73 +2531,133 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
         )}
       </AnimatePresence>
 
-      {/* Floating pill: touch/no-keyboard devices only */}
+      {/* Touch / no-keyboard devices: bottom action bar for the current selection */}
       <AnimatePresence>
-        {!hasKeyboard && pending && !editMode && (
-          <MobilePill
+        {!hasKeyboard && pending && !editMode && !mobileCommentMode && !mobileEdit && (
+          <MobileActionBar
+            key="mobile-action-bar"
             data-toolbar
-            initial={{ opacity: 0, y: 20, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 8, x: '-50%', transition: { duration: 0.15 } }}
+            role="toolbar"
+            aria-label="Annotate selection"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
           >
-            {mobileCommentMode ? (
-              <>
-                <PillInput
-                  autoFocus
-                  placeholder="comment..."
-                  value={mobileCommentText}
-                  onChange={e => setMobileCommentText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && mobileCommentText.trim()) {
-                      e.preventDefault();
-                      pendingRef.current = pendingRef.current
-                        ? { ...pendingRef.current, mode: 'comment', commentText: mobileCommentText.trim() }
-                        : null;
-                      submitPendingRef.current();
-                    }
-                  }}
-                />
-                <PillBtn onClick={() => {
-                  if (!mobileCommentText.trim()) return;
-                  pendingRef.current = pendingRef.current
-                    ? { ...pendingRef.current, mode: 'comment', commentText: mobileCommentText.trim() }
-                    : null;
-                  submitPendingRef.current();
-                }}>send</PillBtn>
-                <PillBtn onClick={() => { setMobileCommentMode(false); setMobileCommentText(''); }}>✕</PillBtn>
-              </>
+            <ActionBtn
+              type="button"
+              $active={pending.mode === 'like'}
+              onClick={() => {
+                pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like', commentText: '' } : null;
+                setPending(p => p ? { ...p, mode: 'like', commentText: '' } : p);
+                submitPendingRef.current();
+              }}
+            >good</ActionBtn>
+            <ActionBtn
+              type="button"
+              $active={pending.mode === 'dislike'}
+              onClick={() => {
+                pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike', commentText: '' } : null;
+                setPending(p => p ? { ...p, mode: 'dislike', commentText: '' } : p);
+                submitPendingRef.current();
+              }}
+            >confusing</ActionBtn>
+            <ActionBtn
+              type="button"
+              onClick={() => {
+                const originalText = pending.selectedText || (contentRef.current ? extractTextRange(contentRef.current, pending.charStart, pending.charLength) : '');
+                setMobileEdit({ originalText, charStart: pending.charStart, replacingId: focusedFeedbackId, text: originalText });
+              }}
+            >edit</ActionBtn>
+            <ActionBtn
+              type="button"
+              onClick={() => { setMobileCommentText(pending.commentText); setMobileCommentMode(true); }}
+            >comment</ActionBtn>
+            {focusedFeedbackId ? (
+              <ActionCloseBtn type="button" aria-label="Delete annotation" onClick={() => deleteFeedback(focusedFeedbackId)}>✕</ActionCloseBtn>
             ) : (
-              <>
-                <PillBtn
-                  $active={pending.mode === 'like'}
-                  onClick={() => {
-                    pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like' } : null;
-                    setPending(p => p ? { ...p, mode: 'like' } : p);
-                    submitPendingRef.current();
-                  }}
-                >good</PillBtn>
-                <PillBtn
-                  $active={pending.mode === 'dislike'}
-                  onClick={() => {
-                    pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike' } : null;
-                    setPending(p => p ? { ...p, mode: 'dislike' } : p);
-                    submitPendingRef.current();
-                  }}
-                >confusing</PillBtn>
-                <PillBtn onClick={() => {
-                  const originalText = pending.selectedText || (contentRef.current ? extractTextRange(contentRef.current, pending.charStart, pending.charLength) : '');
-                  if (focusedFeedbackId) deleteFeedback(focusedFeedbackId);
-                  enterSuggestionModeRef.current(pending.charStart, pending.charLength, originalText);
-                }}>edit</PillBtn>
-                <PillBtn onClick={() => { setMobileCommentMode(true); setMobileCommentText(''); }}>comment</PillBtn>
-                {focusedFeedbackId ? (
-                  <PillBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</PillBtn>
-                ) : (
-                  <PillBtn onClick={() => setPending(null)}>✕</PillBtn>
-                )}
-              </>
+              <ActionCloseBtn type="button" aria-label="Cancel" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>✕</ActionCloseBtn>
             )}
-          </MobilePill>
+          </MobileActionBar>
+        )}
+      </AnimatePresence>
+
+      {/* Touch: comment input */}
+      <BottomSheet open={!hasKeyboard && !!pending && mobileCommentMode} onClose={closeMobileComment} label="Comment">
+        <SheetForm
+          onSubmit={e => {
+            e.preventDefault();
+            const text = mobileCommentText.trim();
+            if (!text) return;
+            pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'comment', commentText: text } : null;
+            submitPendingRef.current();
+          }}
+        >
+          <SheetLabel htmlFor="inklink-mobile-comment">Comment</SheetLabel>
+          {pending?.selectedText && <SheetQuote>{pending.selectedText}</SheetQuote>}
+          <SheetTextarea
+            id="inklink-mobile-comment"
+            $tone="note"
+            autoFocus
+            rows={4}
+            placeholder="add a note..."
+            value={mobileCommentText}
+            onChange={e => setMobileCommentText(e.target.value)}
+          />
+          <SheetActions>
+            <SheetBtn type="button" onClick={closeMobileComment}>Cancel</SheetBtn>
+            <SheetBtn type="submit" $primary disabled={!mobileCommentText.trim()}>Send</SheetBtn>
+          </SheetActions>
+        </SheetForm>
+      </BottomSheet>
+
+      {/* Touch: suggest-an-edit input (replaces inline contentEditable editing) */}
+      <BottomSheet open={!hasKeyboard && !!mobileEdit} onClose={closeMobileEdit} label="Suggest an edit">
+        {mobileEdit && (
+          <SheetForm
+            onSubmit={e => {
+              e.preventDefault();
+              if (mobileEdit.text === mobileEdit.originalText) return;
+              if (mobileEdit.replacingId) deleteFeedback(mobileEdit.replacingId);
+              submitSuggestion(mobileEdit.originalText, mobileEdit.text, mobileEdit.charStart);
+              setPending(null);
+              setFocusedFeedbackId(null);
+              setMobileEdit(null);
+            }}
+          >
+            <SheetLabel htmlFor="inklink-mobile-edit">Suggest an edit</SheetLabel>
+            <SheetQuote>{mobileEdit.originalText}</SheetQuote>
+            <SheetTextarea
+              id="inklink-mobile-edit"
+              $tone="edit"
+              autoFocus
+              rows={4}
+              value={mobileEdit.text}
+              onChange={e => setMobileEdit(m => m ? { ...m, text: e.target.value } : m)}
+            />
+            <SheetActions>
+              <SheetBtn type="button" onClick={closeMobileEdit}>Cancel</SheetBtn>
+              <SheetBtn type="submit" $primary disabled={mobileEdit.text === mobileEdit.originalText}>Propose</SheetBtn>
+            </SheetActions>
+          </SheetForm>
+        )}
+      </BottomSheet>
+
+      {/* Touch: one-time hint */}
+      <AnimatePresence>
+        {showTouchHint && !pending && (
+          <TouchHint
+            key="touch-hint"
+            data-toolbar
+            role="status"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
+          >
+            <TouchHintText>長按選取文字，即可按讚、留言或建議修改</TouchHintText>
+            <TouchHintBtn type="button" onClick={() => setShowTouchHint(false)}>知道了</TouchHintBtn>
+          </TouchHint>
         )}
       </AnimatePresence>
 
