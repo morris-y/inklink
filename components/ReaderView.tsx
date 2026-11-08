@@ -13,7 +13,8 @@ const DotLottiePlayer = dynamic(
   { ssr: false },
 );
 
-const SURFACE_BASE = '#fcfcfc';
+// Same paper tone as the home page (app/_home-client.tsx) so moving between them does not shift color.
+const SURFACE_BASE = '#f7f5f0';
 const SURFACE_TEXTURE = css`
   background-color: ${SURFACE_BASE};
   background-image: url('/bg-texture.png');
