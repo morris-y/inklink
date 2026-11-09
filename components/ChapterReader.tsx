@@ -100,6 +100,20 @@ const ChapterContent = styled.div`
 
   p { margin-bottom: 1.5rem; }
 
+  /* globals.css zeroes all padding, which pushed list markers out of the text column into the page gutter
+     (about 5px from the screen edge on phones). Indent lists so markers sit inside the column. */
+  ol, ul {
+    padding-left: 1.75em;
+    margin-bottom: 1.5rem;
+  }
+  li { padding-left: 0.25em; }
+  li + li { margin-top: 0.25rem; }
+  li > ol, li > ul { margin: 0.25rem 0 0; }
+
+  /* Wide code/diagram blocks scroll inside themselves; the page clips horizontal overflow, so without this
+     their right side was cut off and unreachable on phones. */
+  pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
   hr {
     border: none;
     border-top: 1px solid rgba(26, 26, 24, 0.18);

@@ -29,6 +29,15 @@ const StyledChapterText = styled.div`
     margin-bottom: 1rem;
   }
 
+  /* Same list indent as the reader (ChapterReader.tsx); globals.css zeroes the browser default. */
+  ol, ul {
+    padding-left: 1.75em;
+    margin-bottom: 1rem;
+  }
+  li { padding-left: 0.25em; }
+  li + li { margin-top: 0.25rem; }
+  li > ol, li > ul { margin: 0.25rem 0 0; }
+
   h1, h2, h3, h4, h5, h6 {
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
