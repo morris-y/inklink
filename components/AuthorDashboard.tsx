@@ -698,7 +698,7 @@ interface DashSuggestion {
 /* ─── Retention view ──────────────────────────────────────────────────── */
 
 
-export default function AuthorDashboard({ isProtected = false }: { isProtected?: boolean }) {
+export default function AuthorDashboard({ isProtected = false, initiallyAuthed = false }: { isProtected?: boolean; initiallyAuthed?: boolean }) {
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [chapterVersionId, setChapterVersionId] = useState<string | null>(null);
   const [chapterHtml, setChapterHtml] = useState<string>('');
@@ -707,7 +707,12 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('likes');
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
-  const [needsLogin, setNeedsLogin] = useState(isProtected);
+  const [needsLogin, setNeedsLogin] = useState(isProtected && !initiallyAuthed);
+  // Login POST in flight: the dashboard is already shown in its loading state.
+  const [authPending, setAuthPending] = useState(false);
+  // Dashboard APIs 401 until logged in, and useApi does not retry, so their URLs stay null until then.
+  const authed = !needsLogin && !authPending;
+  const dash = (url: string | null) => (authed ? url : null);
   const [loginPassword, setLoginPassword] = useState('');
   const [shakeKey, setShakeKey] = useState(0);
   const router = useRouter();
@@ -738,13 +743,6 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
     else router.push('/');
   }, [router]);
 
-  // Check if already authed via cookie
-  useEffect(() => {
-    if (!isProtected) return;
-    fetch('/api/dashboard/login').then(res => {
-      if (res.ok) setNeedsLogin(false);
-    }).catch(() => {});
-  }, [isProtected]);
   const [filterValue, setFilterValue] = useState('all');
   const [chapterIdsAtCommit, setChapterIdsAtCommit] = useState<string[] | null>(null);
 
@@ -752,13 +750,13 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
   const { data: chaptersData, loading } = useApi<{ chapters: Chapter[] }>('/api/chapters');
   const chapters = chaptersData?.chapters || [];
 
-  const { data: readersData } = useApi<{ readers: { id: string; display_name: string }[] }>('/api/dashboard/readers');
+  const { data: readersData } = useApi<{ readers: { id: string; display_name: string }[] }>(dash('/api/dashboard/readers'));
   const readers = readersData?.readers || [];
 
-  const { data: groupsData } = useApi<{ groups: { id: string; name: string }[] }>('/api/dashboard/groups');
+  const { data: groupsData } = useApi<{ groups: { id: string; name: string }[] }>(dash('/api/dashboard/groups'));
   const groups = groupsData?.groups || [];
 
-  const { data: signupsData } = useApi<{ signups: InterestSignup[] }>('/api/dashboard/interest-signups');
+  const { data: signupsData } = useApi<{ signups: InterestSignup[] }>(dash('/api/dashboard/interest-signups'));
   const interestSignups = signupsData?.signups || [];
 
   const buildFilterParams = useCallback((filter: string) => {
@@ -779,19 +777,19 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
     ? `/api/dashboard/chapter-versions/${chapterVersionId}/retention`
     : null;
 
-  const { data: heatmapData, mutate: mutateHeatmap } = useApi<{
+  const { data: heatmapData, loading: heatmapLoading, mutate: mutateHeatmap } = useApi<{
     heatmap: HeatmapLine[];
     ranges: HeatmapRange[];
     totalLikes: number;
     totalDislikes: number;
-  }>(heatmapUrl);
+  }>(dash(heatmapUrl));
 
-  const { data: feedbackData, mutate: mutateFeedback } = useApi<{
+  const { data: feedbackData, loading: feedbackLoading, mutate: mutateFeedback } = useApi<{
     comments: DashComment[];
     suggestions: DashSuggestion[];
-  }>(feedbackUrl);
+  }>(dash(feedbackUrl));
 
-  const { data: retentionData } = useApi<RetentionData>(retentionUrl);
+  const { data: retentionData } = useApi<RetentionData>(dash(retentionUrl));
 
   const heatmapLines = heatmapData?.heatmap || [];
   const heatmapRanges = heatmapData?.ranges || [];
@@ -833,16 +831,18 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/dashboard/login', {
+    // Optimistic: show the dashboard in its loading state now; put the overlay back if the password is wrong.
+    setNeedsLogin(false);
+    setAuthPending(true);
+    const ok = await fetch('/api/dashboard/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: loginPassword }),
-    });
-    if (res.ok) {
-      setNeedsLogin(false);
-      setLoginPassword('');
-    } else {
-      setLoginPassword('');
+    }).then(res => res.ok, () => false);
+    setAuthPending(false);
+    setLoginPassword('');
+    if (!ok) {
+      setNeedsLogin(true);
       setShakeKey(k => k + 1);
     }
   };
@@ -884,6 +884,7 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
     }
   };
 
+  const statsLoading = !authed || heatmapLoading || feedbackLoading;
   const chapterStats = {
     likes: totalLikes,
     dislikes: totalDislikes,
@@ -1011,7 +1012,7 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
                   <ContentMeta>
                     <ChapterTitleText>{selectedChapter?.title}</ChapterTitleText>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                      <HeaderStats>
+                      <HeaderStats aria-busy={statsLoading} style={{ opacity: statsLoading ? 0.35 : 1, transition: 'opacity 200ms' }}>
                         <Stat><span>Likes</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.likes}</AnimateNumber></strong></Stat>
                         <Stat><span>Dislikes</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.dislikes}</AnimateNumber></strong></Stat>
                         <Stat><span>Comments</span><strong><AnimateNumber transition={{ type: 'spring', bounce: 0, duration: 0.4 }}>{chapterStats.comments}</AnimateNumber></strong></Stat>
