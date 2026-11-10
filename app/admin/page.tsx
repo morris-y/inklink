@@ -1,6 +1,7 @@
 import AuthorDashboard from '@/components/AuthorDashboard';
-import { isDashboardProtected } from '@/lib/auth/dashboard';
+import { isDashboardAuthed, isDashboardProtected } from '@/lib/auth/dashboard';
 
-export default function AdminPage() {
-  return <AuthorDashboard isProtected={isDashboardProtected()} />;
+export default async function AdminPage() {
+  // Read the cookie on the server so a logged-in visit renders the dashboard directly.
+  return <AuthorDashboard isProtected={isDashboardProtected()} initiallyAuthed={await isDashboardAuthed()} />;
 }
